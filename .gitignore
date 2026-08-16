@@ -1,0 +1,8 @@
+node_modules/
+config.json
+github-secret.json
+logs/
+*.log
+.DS_Store
+.idea/
+__pycache__/
