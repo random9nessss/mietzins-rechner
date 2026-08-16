@@ -1,0 +1,1446 @@
+<title>Mietzins-Check</title>
+<style>
+  /* ---------- Tokens: light (bare :root), dark via media + data-theme ---------- */
+  :root {
+    --bg: #F5F5F7;
+    --card: #FFFFFF;
+    --ink: #1D1D1F;
+    --muted: #6E6E73;
+    --faint: #98989D;
+    --hairline: rgba(0, 0, 0, 0.08);
+    --track: #E3E3E8;
+    --pill: #ECECEE;
+    --hover: #F2F2F4;
+    --accent: #E23324;
+    --accent-hover: #C92B1D;
+    --accent-ink: #FFFFFF;
+    --thumb: #FFFFFF;
+    --ring: rgba(226, 51, 36, 0.22);
+    --tip-bg: rgba(29, 29, 31, 0.92);
+    --tip-ink: #F5F5F7;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05), 0 12px 32px rgba(0, 0, 0, 0.07);
+    --shadow-thumb: 0 1px 4px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+    --shadow-seg: 0 1px 3px rgba(0, 0, 0, 0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0A0A0C;
+      --card: #1B1B1E;
+      --ink: #F5F5F7;
+      --muted: #A1A1A6;
+      --faint: #6E6E73;
+      --hairline: rgba(255, 255, 255, 0.10);
+      --track: #3A3A3E;
+      --pill: #26262A;
+      --hover: #232327;
+      --accent: #FF5A47;
+      --accent-hover: #FF7264;
+      --accent-ink: #FFFFFF;
+      --thumb: #F5F5F7;
+      --ring: rgba(255, 90, 71, 0.30);
+      --tip-bg: rgba(245, 245, 247, 0.95);
+      --tip-ink: #1D1D1F;
+      --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.55), 0 16px 40px rgba(0, 0, 0, 0.40);
+      --shadow-thumb: 0 1px 4px rgba(0, 0, 0, 0.6), 0 0 0 0.5px rgba(255, 255, 255, 0.10);
+      --shadow-seg: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0A0A0C;
+    --card: #1B1B1E;
+    --ink: #F5F5F7;
+    --muted: #A1A1A6;
+    --faint: #6E6E73;
+    --hairline: rgba(255, 255, 255, 0.10);
+    --track: #3A3A3E;
+    --pill: #26262A;
+    --hover: #232327;
+    --accent: #FF5A47;
+    --accent-hover: #FF7264;
+    --accent-ink: #FFFFFF;
+    --thumb: #F5F5F7;
+    --ring: rgba(255, 90, 71, 0.30);
+    --tip-bg: rgba(245, 245, 247, 0.95);
+    --tip-ink: #1D1D1F;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.55), 0 16px 40px rgba(0, 0, 0, 0.40);
+    --shadow-thumb: 0 1px 4px rgba(0, 0, 0, 0.6), 0 0 0 0.5px rgba(255, 255, 255, 0.10);
+    --shadow-seg: 0 1px 3px rgba(0, 0, 0, 0.5);
+  }
+
+  /* ---------- Base ---------- */
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ---------- Motion primitives ---------- */
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  @keyframes pop  { from { opacity: 0.3; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: none; } }
+  .hero > *, .tabs-row, .card.first {
+    animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .hero > :nth-child(1) { animation-delay: 0.05s; }
+  .hero > :nth-child(2) { animation-delay: 0.13s; }
+  .hero > :nth-child(3) { animation-delay: 0.21s; }
+  .tabs-row            { animation-delay: 0.30s; }
+  .card.first          { animation-delay: 0.38s; }
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .reveal.in { opacity: 1; transform: none; }
+  .pop { animation: pop 0.45s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  @media (prefers-reduced-motion: reduce) {
+    .hero > *, .tabs-row, .card.first, .pop { animation: none; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* ---------- Top bar (frosted, sticky) ---------- */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    border-bottom: 1px solid var(--hairline);
+  }
+  @supports (backdrop-filter: blur(20px)) or (-webkit-backdrop-filter: blur(20px)) {
+    .topbar {
+      background: color-mix(in srgb, var(--bg) 72%, transparent);
+      -webkit-backdrop-filter: saturate(1.8) blur(20px);
+      backdrop-filter: saturate(1.8) blur(20px);
+    }
+  }
+  .topbar-inner {
+    max-width: 1020px;
+    margin: 0 auto;
+    padding: 0 24px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .name { display: flex; align-items: center; gap: 10px; }
+  .brand-mark { width: 9px; height: 9px; border-radius: 3px; background: var(--accent); flex: none; }
+  .name h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+  .controls { display: flex; align-items: center; gap: 10px; }
+
+  .seg {
+    display: flex;
+    background: var(--pill);
+    border-radius: 999px;
+    padding: 3px;
+  }
+  .seg button {
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    padding: 5px 11px;
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.25s ease, box-shadow 0.25s ease;
+  }
+  .seg button:hover { color: var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow-seg); }
+  .seg button:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring); }
+
+  .icon-btn {
+    width: 32px; height: 32px;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 999px;
+    background: var(--pill);
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  }
+  .icon-btn:hover { color: var(--ink); background: var(--hover); }
+  .icon-btn:active { transform: scale(0.92); }
+  .icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring); }
+  .icon-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---------- Page & hero ---------- */
+  .page { max-width: 1020px; margin: 0 auto; padding: 0 24px 72px; }
+  .hero { text-align: center; padding: 64px 0 8px; }
+  .hero .eyebrow { display: block; margin-bottom: 18px; }
+  .hero .figure {
+    font-size: clamp(72px, 13vw, 124px);
+    font-weight: 700;
+    letter-spacing: -0.045em;
+    line-height: 0.95;
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+  }
+  .hero .meta { color: var(--muted); font-size: 15px; line-height: 1.6; margin-top: 18px; }
+
+  /* ---------- Tabs (pill segmented, centered) ---------- */
+  .tabs-row { display: flex; justify-content: center; padding: 34px 0 30px; }
+  .tabs { display: flex; background: var(--pill); border-radius: 999px; padding: 4px; }
+  .tabs button {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--muted);
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.25s ease, box-shadow 0.25s ease;
+  }
+  .tabs button:hover { color: var(--ink); }
+  .tabs button[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow-seg); }
+  .tabs button:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring); }
+
+  /* ---------- Cards ---------- */
+  .card {
+    background: var(--card);
+    border-radius: 24px;
+    box-shadow: var(--shadow-card);
+    padding: 36px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 560px) { .card { padding: 26px 22px; border-radius: 20px; } }
+
+  /* ---------- Calculator grid: inputs left, result right ---------- */
+  @media (min-width: 860px) {
+    .calc-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 10fr) minmax(0, 11fr);
+      gap: 0 48px;
+      align-items: start;
+    }
+  }
+  .field-group { margin-bottom: 26px; }
+  .field-group > .eyebrow { display: block; margin-bottom: 12px; }
+
+  .rent-wrap { position: relative; max-width: 260px; }
+  .rent-wrap .unit {
+    position: absolute;
+    left: 16px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--faint);
+    font-size: 16px;
+    pointer-events: none;
+  }
+  input#rent {
+    width: 100%;
+    padding: 13px 16px 13px 58px;
+    font: inherit;
+    font-size: 18px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    background: var(--pill);
+    border: 1px solid transparent;
+    border-radius: 14px;
+    transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  input#rent:hover { background: var(--hover); }
+  input#rent:focus { outline: none; background: var(--card); border-color: var(--accent); box-shadow: 0 0 0 4px var(--ring); }
+  .hint { font-size: 12.5px; color: var(--faint); margin-top: 8px; }
+
+  /* ---------- Rate slider (filled track, springy thumb) ---------- */
+  .slider-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+  .slider-head .value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; }
+  .slider-wrap { max-width: 430px; padding: 0 2px; }
+  input[type="range"] {
+    --fill: 22.2%;
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 30px;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 5px;
+    border-radius: 3px;
+    background: linear-gradient(to right, var(--accent) var(--fill), var(--track) var(--fill));
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px; height: 24px;
+    margin-top: -9.5px;
+    background: var(--thumb);
+    border: none;
+    border-radius: 50%;
+    box-shadow: var(--shadow-thumb);
+    transition: transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.12); }
+  input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.22); }
+  input[type="range"]::-moz-range-track { height: 5px; border-radius: 3px; background: var(--track); }
+  input[type="range"]::-moz-range-progress { height: 5px; border-radius: 3px; background: var(--accent); }
+  input[type="range"]::-moz-range-thumb {
+    width: 24px; height: 24px;
+    background: var(--thumb);
+    border: none;
+    border-radius: 50%;
+    box-shadow: var(--shadow-thumb);
+  }
+  input[type="range"]:focus-visible { outline: none; }
+  input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: var(--shadow-thumb), 0 0 0 5px var(--ring); }
+  input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: var(--shadow-thumb), 0 0 0 5px var(--ring); }
+  .slider-scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+    margin-top: 6px;
+  }
+  .chip-note { font-size: 12.5px; color: var(--muted); margin-top: 12px; min-height: 1.4em; }
+
+  /* ---------- Month picker ---------- */
+  details.date-helper { margin-top: 16px; }
+  details.date-helper summary {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.2s ease;
+  }
+  details.date-helper summary::-webkit-details-marker { display: none; }
+  details.date-helper summary::after {
+    content: "";
+    width: 7px; height: 7px;
+    border-right: 1.6px solid currentColor;
+    border-bottom: 1.6px solid currentColor;
+    transform: rotate(45deg) translateY(-2px);
+    transition: transform 0.25s ease;
+  }
+  details.date-helper[open] summary::after { transform: rotate(225deg) translateY(-1px); }
+  details.date-helper summary:hover, details.date-helper[open] summary { color: var(--ink); }
+
+  .picker {
+    margin-top: 14px;
+    background: var(--pill);
+    border-radius: 18px;
+    padding: 18px;
+    max-width: 430px;
+  }
+  .picker-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .picker-head .eyebrow { color: var(--faint); }
+  .year-nav { display: flex; align-items: center; gap: 4px; }
+  .year-nav button {
+    font-family: inherit;
+    font-size: 16px;
+    line-height: 1;
+    width: 28px; height: 28px;
+    display: grid; place-items: center;
+    color: var(--muted);
+    background: var(--card);
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    padding: 0 0 2px;
+    box-shadow: var(--shadow-seg);
+    transition: color 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+  }
+  .year-nav button:hover:not(:disabled) { color: var(--ink); }
+  .year-nav button:active:not(:disabled) { transform: scale(0.9); }
+  .year-nav button:disabled { opacity: 0.35; cursor: default; }
+  .year-nav button:focus-visible { outline: none; box-shadow: var(--shadow-seg), 0 0 0 4px var(--ring); }
+  .year-nav .year { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 54px; text-align: center; }
+  .months { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  @media (max-width: 460px) { .months { grid-template-columns: repeat(4, 1fr); } }
+  .month-btn {
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 8px 0;
+    text-align: center;
+    background: transparent;
+    color: var(--ink);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  }
+  .month-btn:hover:not(:disabled) { background: var(--hover); }
+  .month-btn:active:not(:disabled) { transform: scale(0.94); }
+  .month-btn:disabled { color: var(--faint); opacity: 0.5; cursor: default; }
+  .month-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .month-btn:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring); }
+  .date-feedback { font-size: 12.5px; color: var(--muted); margin: 14px 0 0; min-height: 1.4em; }
+  .date-feedback strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Result ---------- */
+  section.result { border-top: 1px solid var(--hairline); padding-top: 26px; margin-top: 6px; }
+  @media (min-width: 860px) {
+    section.result { border-top: none; border-left: 1px solid var(--hairline); padding: 4px 0 0 48px; margin-top: 0; }
+  }
+  .result .eyebrow { display: block; margin-bottom: 14px; }
+  .headline {
+    font-size: clamp(40px, 6vw, 64px);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    text-wrap: balance;
+    margin: 0 0 8px;
+  }
+  .headline .per { font-size: 0.3em; font-weight: 500; letter-spacing: -0.01em; color: var(--muted); }
+  .headline.neutral { color: var(--ink); font-size: clamp(23px, 4vw, 30px); font-weight: 600; letter-spacing: -0.02em; }
+  .subline { color: var(--muted); font-size: 13.5px; margin: 0 0 24px; max-width: 44ch; }
+  .breakdown { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 16px 24px; }
+  .breakdown .cell .eyebrow { display: block; margin-bottom: 6px; font-size: 11px; }
+  .breakdown .cell .value { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  a.jump {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 24px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    transition: color 0.2s ease, gap 0.2s ease;
+  }
+  a.jump::after { content: "↓"; transition: transform 0.25s ease; }
+  a.jump:hover { color: var(--accent-hover); }
+  a.jump:hover::after { transform: translateY(2px); }
+
+  /* ---------- Letter card ---------- */
+  .letter h2, .notes h2, .history h2 {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 16px;
+  }
+  .letter-box { background: var(--pill); border-radius: 16px; padding: 22px 24px; }
+  .letter-box pre {
+    margin: 0;
+    font-family: inherit;
+    font-size: 13.5px;
+    line-height: 1.62;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .letter-actions { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+  button.copy {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    padding: 11px 22px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  button.copy:hover { background: var(--accent-hover); }
+  button.copy:active { transform: scale(0.96); }
+  button.copy:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring); }
+  a.mail {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    padding: 11px 22px;
+    background: var(--pill);
+    color: var(--ink);
+    border-radius: 999px;
+    text-decoration: none;
+    transition: background 0.2s ease, transform 0.15s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  a.mail:hover { background: var(--hover); }
+  a.mail:active { transform: scale(0.96); }
+  a.mail:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring); }
+  .copy-status { font-size: 13px; color: var(--muted); }
+  .letter .hint { max-width: 62ch; margin-top: 14px; }
+
+  /* ---------- History ---------- */
+  .chart-wrap { position: relative; max-width: 800px; }
+  .chart-wrap svg { display: block; width: 100%; height: auto; }
+  .chart-grid { stroke: var(--hairline); stroke-width: 1; }
+  .chart-axis-text { fill: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .chart-line { stroke: var(--accent); stroke-width: 2.5; fill: none; stroke-linejoin: round; }
+  .chart-end { fill: var(--accent); }
+  .chart-end-label { fill: var(--ink); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .chart-cursor { stroke: var(--track); stroke-width: 1; }
+  .chart-tip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--tip-bg);
+    color: var(--tip-ink);
+    font-size: 12px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    padding: 6px 11px;
+    border-radius: 999px;
+    white-space: nowrap;
+    transform: translate(-50%, 0);
+    display: none;
+    box-shadow: var(--shadow-seg);
+  }
+  .history table { width: 100%; max-width: 560px; border-collapse: collapse; margin-top: 26px; font-size: 14px; }
+  .history th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 12px 10px 4px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .history td { padding: 9px 12px 9px 4px; border-bottom: 1px solid var(--hairline); font-variant-numeric: tabular-nums; }
+  .history tr:last-child td { border-bottom: none; }
+  .history tbody tr { transition: background 0.15s ease; }
+  .history tbody tr:hover { background: var(--hover); }
+  .history td.rate { font-weight: 600; }
+  .history td.delta { color: var(--muted); }
+  .history td.delta.down { color: var(--accent); font-weight: 500; }
+
+  /* ---------- Notes & footer ---------- */
+  section.notes { padding: 8px 8px 0; }
+  @media (min-width: 860px) { .notes-cols { columns: 2; column-gap: 48px; } }
+  .notes p { font-size: 13px; line-height: 1.62; color: var(--muted); margin: 0 0 10px; max-width: 58ch; break-inside: avoid; }
+  .notes p strong { color: var(--ink); font-weight: 600; }
+  footer {
+    margin-top: 44px;
+    padding-top: 22px;
+    border-top: 1px solid var(--hairline);
+    font-size: 12px;
+    color: var(--faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+</style>
+
+<script>
+  // Apply a stored theme choice before first paint to avoid a flash.
+  (function () {
+    try {
+      var t = localStorage.getItem("mietzins-theme");
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) { /* storage unavailable: stay on system */ }
+  })();
+</script>
+
+<!-- ============================================================
+     RATE DATA — machine-updated after each BWO announcement.
+     A scheduled agent patches ONLY this JSON block; everything
+     visible on the page derives from it at load time.
+     series: every rate CHANGE since 10.09.2008, ["YYYY-MM-DD", %]
+     ============================================================ -->
+<script id="rate-data" type="application/json">
+{
+  "series": [
+    ["2008-09-10", 3.50],
+    ["2009-06-03", 3.25],
+    ["2009-09-02", 3.00],
+    ["2010-12-02", 2.75],
+    ["2011-12-02", 2.50],
+    ["2012-06-02", 2.25],
+    ["2013-09-03", 2.00],
+    ["2015-06-02", 1.75],
+    ["2017-06-02", 1.50],
+    ["2020-03-03", 1.25],
+    ["2023-06-02", 1.50],
+    ["2023-12-02", 1.75],
+    ["2025-03-04", 1.50],
+    ["2025-09-02", 1.25]
+  ],
+  "announcedOn": "2026-06-01",
+  "nextAnnouncement": "2026-09-01"
+}
+</script>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="name">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <h1>Mietzins-Check</h1>
+    </div>
+    <div class="controls">
+      <div class="seg" id="lang-toggle" role="group" aria-label="Sprache / Langue / Lingua / Language">
+        <button type="button" data-lang="de" aria-pressed="true">DE</button>
+        <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+        <button type="button" data-lang="it" aria-pressed="false">IT</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <button type="button" class="icon-btn" id="theme-btn" aria-pressed="false">
+        <svg id="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg>
+        <svg id="icon-sun" viewBox="0 0 24 24" aria-hidden="true" style="display:none"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"></path></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+  <header class="hero">
+    <span class="eyebrow" id="hdr-label"></span>
+    <p class="figure" id="current-rate">–</p>
+    <p class="meta" id="rate-meta"></p>
+  </header>
+
+  <div class="tabs-row">
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-calc" aria-selected="true" aria-controls="panel-calc"></button>
+      <button type="button" role="tab" id="tab-hist" aria-selected="false" aria-controls="panel-hist"></button>
+    </nav>
+  </div>
+
+  <div id="panel-calc" role="tabpanel" aria-labelledby="tab-calc">
+    <div class="card first">
+      <div class="calc-grid">
+        <div class="inputs">
+          <div class="field-group">
+            <label class="eyebrow" for="rent" id="rent-label"></label>
+            <div class="rent-wrap">
+              <span class="unit">CHF</span>
+              <input id="rent" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="1’800">
+            </div>
+            <p class="hint" id="rent-hint"></p>
+          </div>
+
+          <div class="field-group">
+            <div class="slider-head">
+              <label class="eyebrow" for="basis" id="basis-label"></label>
+              <span class="value" id="basis-value">–</span>
+            </div>
+            <div class="slider-wrap">
+              <input type="range" id="basis" min="0" max="9" step="1" value="2" aria-labelledby="basis-label">
+              <div class="slider-scale" aria-hidden="true"><span>1.25&nbsp;%</span><span>3.50&nbsp;%</span></div>
+            </div>
+            <p class="chip-note" id="chip-note"></p>
+            <details class="date-helper">
+              <summary id="date-summary"></summary>
+              <div class="picker">
+                <div class="picker-head">
+                  <span class="eyebrow" id="picker-label"></span>
+                  <div class="year-nav">
+                    <button type="button" id="yr-prev">‹</button>
+                    <span class="year" id="yr" aria-live="polite">2026</span>
+                    <button type="button" id="yr-next">›</button>
+                  </div>
+                </div>
+                <div class="months" id="months" role="group" aria-labelledby="picker-label"></div>
+                <p class="date-feedback" id="date-feedback"></p>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <section class="result" aria-live="polite">
+          <span class="eyebrow" id="result-label"></span>
+          <p class="headline" id="headline">–</p>
+          <p class="subline" id="subline"></p>
+          <div class="breakdown" id="breakdown" hidden>
+            <div class="cell">
+              <span class="eyebrow" id="lbl-pct"></span>
+              <div class="value" id="out-pct">–</div>
+            </div>
+            <div class="cell">
+              <span class="eyebrow" id="lbl-new"></span>
+              <div class="value" id="out-new">–</div>
+            </div>
+            <div class="cell">
+              <span class="eyebrow" id="lbl-year"></span>
+              <div class="value" id="out-year">–</div>
+            </div>
+          </div>
+          <a class="jump" href="#letter-sec" id="to-letter" hidden></a>
+        </section>
+      </div>
+    </div>
+
+    <section class="card reveal letter" id="letter-sec" hidden>
+      <h2 id="letter-title"></h2>
+      <div class="letter-box"><pre id="letter-text"></pre></div>
+      <div class="letter-actions">
+        <a class="mail" id="mail-btn" href="#" target="_blank" rel="noopener"></a>
+        <button type="button" class="copy" id="copy-btn"></button>
+        <span class="copy-status" id="copy-status" aria-live="polite"></span>
+      </div>
+      <p class="hint" id="letter-hint"></p>
+    </section>
+
+    <section class="notes reveal">
+      <h2 id="notes-title"></h2>
+      <div class="notes-cols" id="notes-body"></div>
+    </section>
+  </div>
+
+  <div id="panel-hist" role="tabpanel" aria-labelledby="tab-hist" hidden>
+    <section class="card history">
+      <h2 id="hist-label"></h2>
+      <div class="chart-wrap" id="chart-wrap">
+        <div class="chart-tip" id="chart-tip"></div>
+      </div>
+      <table>
+        <thead>
+          <tr><th scope="col" id="th-date"></th><th scope="col" id="th-rate"></th><th scope="col" id="th-delta"></th></tr>
+        </thead>
+        <tbody id="hist-rows"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <footer>
+    <span id="src"></span>
+    <span id="stand"></span>
+  </footer>
+</div>
+
+<script>
+  "use strict";
+
+  // ---------- Data (from the machine-updated JSON block above) ----------
+  const DATA = JSON.parse(document.getElementById("rate-data").textContent);
+  const SERIES = DATA.series;
+  const CURRENT = SERIES[SERIES.length - 1][1];
+  const CURRENT_SINCE = SERIES[SERIES.length - 1][0];
+
+  const chf = new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 });
+  const NBSP = " ";                       // never wrap before the % sign
+  const fmtRate = (r) => r.toFixed(2) + NBSP + "%";
+  const fmtPct = (frac) => Math.abs(frac * 100).toFixed(2) + NBSP + "%";
+  const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------- Translations ----------
+  const I18N = {
+    de: {
+      monthsLong: ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"],
+      monthsShort: ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"],
+      date: (d, m, y) => d + ". " + m + " " + y,
+      themeAria: "Dunkelmodus umschalten",
+      hdrLabel: "Hypothekarischer Referenzzinssatz · Schweiz",
+      meta: (since, last, next) => "gültig seit " + since + "<br>letzte Publikation " + last + " · nächste " + next,
+      tabCalc: "Rechner", tabHist: "Verlauf seit 2008",
+      rentLabel: "Ihre Nettomiete pro Monat",
+      rentHint: "Ohne Nebenkosten — der Betrag «netto» auf Ihrem Mietvertrag.",
+      basisLabel: "Referenzzinssatz bei der letzten Mietzinsfestlegung",
+      ratePeriods: (r, list) => r + " galt: " + list,
+      today: "heute",
+      dateSummary: "Satz unbekannt? Datum wählen",
+      pickerLabel: "Vertragsabschluss",
+      pickerHint: "Monat wählen, in dem der Vertrag unterschrieben oder die Miete zuletzt angepasst wurde.",
+      dateFeedback: (mo, r) => "Im " + mo + " galt <strong>" + r + "</strong>. Regler oben angepasst.",
+      yrPrev: "Früheres Jahr", yrNext: "Späteres Jahr",
+      resultLabel: "Ihr mögliches Senkungspotenzial",
+      perMonth: "pro Monat",
+      noClaim: "Kein Senkungsanspruch",
+      noClaimSame: (r) => "Ihre Miete beruht bereits auf dem aktuellen Satz von " + r + ".",
+      noClaimUp: (p) => "Der Satz ist seit Ihrer Festlegung gestiegen — der Vermieter hätte Spielraum für +" + p + ".",
+      enterRent: "Nettomiete eingeben, um den Betrag in Franken zu sehen.",
+      basisArrow: (b, c) => "Basis " + b + " → heute " + c + ", vor Verrechnung von Teuerung und Kostensteigerungen.",
+      lblPct: "Senkung", lblNew: "Neue Nettomiete", lblYear: "Ersparnis pro Jahr",
+      toLetter: "Briefvorlage anzeigen",
+      letterTitle: "Vorlage: Senkungsbegehren an Ihre Verwaltung",
+      mailBtn: "Als E-Mail öffnen", mailSubject: "Begehren um Mietzinssenkung",
+      copy: "Text kopieren", copied: "Kopiert.",
+      copyFail: "Kopieren nicht möglich — Text manuell markieren.",
+      letterHint: "Platzhalter in eckigen Klammern ergänzen und per E-Mail oder — beweissicherer — per Einschreiben senden.",
+      notesTitle: "So funktioniert die Rechnung",
+      notes: [
+        "Sinkt der Referenzzinssatz unter den Satz, auf dem Ihre Miete beruht, haben Sie Anspruch auf eine Senkung (Art.&nbsp;270a&nbsp;OR, Art.&nbsp;13&nbsp;VMWG): <strong>2.91&nbsp;% pro Viertelprozent</strong>, bei mehreren Schritten gemäss der offiziellen Überwälzungstabelle (z.&nbsp;B. 1.75&nbsp;% → 1.25&nbsp;% = −5.66&nbsp;%).",
+        "<strong>Vorbehalt:</strong> Vermieter dürfen 40&nbsp;% der aufgelaufenen Teuerung (Art.&nbsp;16&nbsp;VMWG) sowie nachgewiesene Kostensteigerungen gegenrechnen — das effektive Ergebnis kann darum tiefer ausfallen. Ausgenommen sind indexierte und gestaffelte Mietverträge.",
+        "<strong>Nächster Schritt:</strong> Senkungsbegehren schriftlich an die Verwaltung, auf den nächstmöglichen Kündigungstermin. Der Vermieter muss innert 30&nbsp;Tagen Stellung nehmen (Art.&nbsp;270a&nbsp;Abs.&nbsp;2&nbsp;OR).",
+        "Dieses Tool ersetzt keine Rechtsberatung."
+      ],
+      histLabel: "Referenzzinssatz 2008 – heute",
+      thDate: "Gültig ab", thRate: "Satz", thDelta: "Veränderung",
+      introduced: "Einführung",
+      chartAria: (r) => "Verlauf des Referenzzinssatzes von 2008 bis heute, von 3.50 % auf " + r,
+      src: "Quelle: Bundesamt für Wohnungswesen (BWO) · aktualisiert nach jeder Publikation",
+      stand: (d) => "Stand: " + d,
+      letter: (cur, neu, diff, pct, basis) => [
+        "Betreff: Begehren um Mietzinssenkung", "",
+        "Sehr geehrte Damen und Herren", "",
+        "Mietobjekt: [Adresse, Stockwerk/Wohnung], Mieterin/Mieter: [Name]", "",
+        "Der hypothekarische Referenzzinssatz beträgt seit dem " + fmtDate(CURRENT_SINCE) + " " + fmtRate(CURRENT) +
+          " (Publikation des Bundesamts für Wohnungswesen). Mein aktueller Nettomietzins von " + cur +
+          " beruht auf einem Referenzzinssatz von " + basis + ".", "",
+        "Gestützt auf Art. 270a OR und Art. 13 VMWG ersuche ich Sie, den Nettomietzins auf den nächstmöglichen " +
+          "Kündigungstermin um " + pct + " herabzusetzen, von " + cur + " auf " + neu + diff + ".", "",
+        "Sollten Sie Teuerung oder Kostensteigerungen verrechnen wollen, bitte ich um eine nachvollziehbare, " +
+          "belegte Aufstellung der einzelnen Positionen.", "",
+        "Ich bitte Sie um eine schriftliche Stellungnahme innert 30 Tagen (Art. 270a Abs. 2 OR).", "",
+        "Freundliche Grüsse", "[Vor- und Nachname]", "[Adresse]"
+      ],
+      diffPerMonth: (d) => " (− CHF " + d + " pro Monat)",
+      phRent: "[Nettomiete]", phNewRent: "[neue Nettomiete]"
+    },
+    fr: {
+      monthsLong: ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"],
+      monthsShort: ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Aoû","Sep","Oct","Nov","Déc"],
+      date: (d, m, y) => (d === 1 ? "1er" : d) + " " + m + " " + y,
+      themeAria: "Basculer le mode sombre",
+      hdrLabel: "Taux d’intérêt de référence hypothécaire · Suisse",
+      meta: (since, last, next) => "en vigueur depuis le " + since + "<br>dernière publication le " + last + " · prochaine le " + next,
+      tabCalc: "Calculateur", tabHist: "Évolution depuis 2008",
+      rentLabel: "Votre loyer net mensuel",
+      rentHint: "Hors frais accessoires — le montant «net» de votre bail.",
+      basisLabel: "Taux de référence lors de la dernière fixation du loyer",
+      ratePeriods: (r, list) => r + " en vigueur : " + list,
+      today: "aujourd’hui",
+      dateSummary: "Taux inconnu ? Choisir la date",
+      pickerLabel: "Signature du bail",
+      pickerHint: "Choisissez le mois de la signature du bail ou de la dernière adaptation du loyer.",
+      dateFeedback: (mo, r) => "En " + mo + ", le taux était de <strong>" + r + "</strong>. Curseur ajusté.",
+      yrPrev: "Année précédente", yrNext: "Année suivante",
+      resultLabel: "Votre potentiel de baisse",
+      perMonth: "par mois",
+      noClaim: "Pas de droit à une baisse",
+      noClaimSame: (r) => "Votre loyer repose déjà sur le taux actuel de " + r + ".",
+      noClaimUp: (p) => "Le taux a augmenté depuis la fixation — le bailleur aurait une marge de +" + p + ".",
+      enterRent: "Saisissez le loyer net pour voir le montant en francs.",
+      basisArrow: (b, c) => "Base " + b + " → aujourd’hui " + c + ", avant compensation du renchérissement et des hausses de coûts.",
+      lblPct: "Baisse", lblNew: "Nouveau loyer net", lblYear: "Économie par an",
+      toLetter: "Afficher le modèle de lettre",
+      letterTitle: "Modèle : demande de baisse de loyer à votre gérance",
+      mailBtn: "Ouvrir dans l’e-mail", mailSubject: "Demande de baisse de loyer",
+      copy: "Copier le texte", copied: "Copié.",
+      copyFail: "Copie impossible — sélectionnez le texte manuellement.",
+      letterHint: "Complétez les espaces entre crochets et envoyez par e-mail ou — avec valeur probante — par courrier recommandé.",
+      notesTitle: "Comment le calcul fonctionne",
+      notes: [
+        "Si le taux de référence descend au-dessous du taux sur lequel repose votre loyer, vous avez droit à une baisse (art.&nbsp;270a&nbsp;CO, art.&nbsp;13&nbsp;OBLF)&nbsp;: <strong>2.91&nbsp;% par quart de point</strong>, en cas de plusieurs paliers selon le tableau officiel de répercussion (p.&nbsp;ex. 1.75&nbsp;% → 1.25&nbsp;% = −5.66&nbsp;%).",
+        "<strong>Réserve&nbsp;:</strong> le bailleur peut compenser 40&nbsp;% du renchérissement (art.&nbsp;16&nbsp;OBLF) ainsi que des hausses de coûts prouvées — le résultat effectif peut donc être inférieur. Les baux indexés et échelonnés sont exclus.",
+        "<strong>Étape suivante&nbsp;:</strong> demande de baisse écrite à la gérance, pour le prochain terme de résiliation. Le bailleur doit se prononcer dans les 30&nbsp;jours (art.&nbsp;270a&nbsp;al.&nbsp;2&nbsp;CO).",
+        "Cet outil ne remplace pas un conseil juridique."
+      ],
+      histLabel: "Taux de référence 2008 – aujourd’hui",
+      thDate: "En vigueur dès", thRate: "Taux", thDelta: "Variation",
+      introduced: "Introduction",
+      chartAria: (r) => "Évolution du taux de référence de 2008 à aujourd’hui, de 3.50 % à " + r,
+      src: "Source : Office fédéral du logement (OFL) · mis à jour après chaque publication",
+      stand: (d) => "État au " + d,
+      letter: (cur, neu, diff, pct, basis) => [
+        "Objet : Demande de baisse de loyer", "",
+        "Madame, Monsieur,", "",
+        "Objet loué : [adresse, étage/appartement], locataire : [nom]", "",
+        "Depuis le " + fmtDate(CURRENT_SINCE) + ", le taux d’intérêt de référence hypothécaire s’élève à " + fmtRate(CURRENT) +
+          " (publication de l’Office fédéral du logement). Mon loyer net actuel de " + cur +
+          " repose sur un taux de référence de " + basis + ".", "",
+        "Me fondant sur l’art. 270a CO et l’art. 13 OBLF, je vous prie de réduire le loyer net de " + pct +
+          " pour le prochain terme de résiliation, de " + cur + " à " + neu + diff + ".", "",
+        "Si vous entendez compenser le renchérissement ou des hausses de coûts, je vous prie de m’en fournir " +
+          "un décompte détaillé et justifié.", "",
+        "Je vous prie de me faire parvenir votre prise de position écrite dans les 30 jours (art. 270a al. 2 CO).", "",
+        "Veuillez agréer, Madame, Monsieur, mes salutations distinguées.", "[Prénom et nom]", "[Adresse]"
+      ],
+      diffPerMonth: (d) => " (− CHF " + d + " par mois)",
+      phRent: "[loyer net]", phNewRent: "[nouveau loyer net]"
+    },
+    it: {
+      monthsLong: ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"],
+      monthsShort: ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"],
+      date: (d, m, y) => (d === 1 ? "1°" : d) + " " + m + " " + y,
+      themeAria: "Attivare/disattivare la modalità scura",
+      hdrLabel: "Tasso d’interesse di riferimento ipotecario · Svizzera",
+      meta: (since, last, next) => "in vigore dal " + since + "<br>ultima pubblicazione " + last + " · prossima " + next,
+      tabCalc: "Calcolatore", tabHist: "Andamento dal 2008",
+      rentLabel: "La sua pigione netta mensile",
+      rentHint: "Escluse le spese accessorie — l’importo «netto» del contratto di locazione.",
+      basisLabel: "Tasso di riferimento all’ultima determinazione della pigione",
+      ratePeriods: (r, list) => r + " in vigore: " + list,
+      today: "oggi",
+      dateSummary: "Tasso sconosciuto? Scegliere la data",
+      pickerLabel: "Firma del contratto",
+      pickerHint: "Scelga il mese della firma del contratto o dell’ultimo adeguamento della pigione.",
+      dateFeedback: (mo, r) => "Nel " + mo + " il tasso era <strong>" + r + "</strong>. Cursore aggiornato.",
+      yrPrev: "Anno precedente", yrNext: "Anno successivo",
+      resultLabel: "Il suo potenziale di riduzione",
+      perMonth: "al mese",
+      noClaim: "Nessun diritto alla riduzione",
+      noClaimSame: (r) => "La sua pigione si basa già sul tasso attuale del " + r + ".",
+      noClaimUp: (p) => "Il tasso è aumentato dall’ultima determinazione — il locatore avrebbe un margine di +" + p + ".",
+      enterRent: "Inserisca la pigione netta per vedere l’importo in franchi.",
+      basisArrow: (b, c) => "Base " + b + " → oggi " + c + ", prima del computo di rincaro e aumenti dei costi.",
+      lblPct: "Riduzione", lblNew: "Nuova pigione netta", lblYear: "Risparmio annuo",
+      toLetter: "Mostra il modello di lettera",
+      letterTitle: "Modello: richiesta di riduzione della pigione all’amministrazione",
+      mailBtn: "Apri nell’e-mail", mailSubject: "Richiesta di riduzione della pigione",
+      copy: "Copia il testo", copied: "Copiato.",
+      copyFail: "Copia non possibile — selezioni il testo manualmente.",
+      letterHint: "Completi i segnaposto tra parentesi quadre e invii per e-mail o — con valore probatorio — per raccomandata.",
+      notesTitle: "Come funziona il calcolo",
+      notes: [
+        "Se il tasso di riferimento scende al di sotto del tasso su cui si basa la sua pigione, ha diritto a una riduzione (art.&nbsp;270a&nbsp;CO, art.&nbsp;13&nbsp;OLAL): <strong>2.91&nbsp;% per quarto di punto</strong>, con più scatti secondo la tabella ufficiale di ripercussione (p.&nbsp;es. 1.75&nbsp;% → 1.25&nbsp;% = −5.66&nbsp;%).",
+        "<strong>Riserva:</strong> il locatore può computare il 40&nbsp;% del rincaro (art.&nbsp;16&nbsp;OLAL) e aumenti dei costi comprovati — il risultato effettivo può quindi essere inferiore. Sono esclusi i contratti indicizzati e scalari.",
+        "<strong>Prossimo passo:</strong> richiesta scritta di riduzione all’amministrazione, per la prossima scadenza di disdetta. Il locatore deve pronunciarsi entro 30&nbsp;giorni (art.&nbsp;270a&nbsp;cpv.&nbsp;2&nbsp;CO).",
+        "Questo strumento non sostituisce una consulenza legale."
+      ],
+      histLabel: "Tasso di riferimento 2008 – oggi",
+      thDate: "In vigore dal", thRate: "Tasso", thDelta: "Variazione",
+      introduced: "Introduzione",
+      chartAria: (r) => "Andamento del tasso di riferimento dal 2008 a oggi, dal 3.50 % al " + r,
+      src: "Fonte: Ufficio federale delle abitazioni (UFAB) · aggiornato dopo ogni pubblicazione",
+      stand: (d) => "Stato al " + d,
+      letter: (cur, neu, diff, pct, basis) => [
+        "Oggetto: Richiesta di riduzione della pigione", "",
+        "Gentili Signore e Signori,", "",
+        "Oggetto locato: [indirizzo, piano/appartamento], conduttore: [nome]", "",
+        "Dal " + fmtDate(CURRENT_SINCE) + " il tasso d’interesse di riferimento ipotecario ammonta all’" + fmtRate(CURRENT) +
+          " (pubblicazione dell’Ufficio federale delle abitazioni). La mia attuale pigione netta di " + cur +
+          " si basa su un tasso di riferimento del " + basis + ".", "",
+        "In virtù dell’art. 270a CO e dell’art. 13 OLAL, chiedo di ridurre la pigione netta del " + pct +
+          " per la prossima scadenza di disdetta, da " + cur + " a " + neu + diff + ".", "",
+        "Qualora intendeste computare il rincaro o aumenti dei costi, chiedo una distinta dettagliata e " +
+          "documentata delle singole posizioni.", "",
+        "Chiedo una presa di posizione scritta entro 30 giorni (art. 270a cpv. 2 CO).", "",
+        "Distinti saluti", "[Nome e cognome]", "[Indirizzo]"
+      ],
+      diffPerMonth: (d) => " (− CHF " + d + " al mese)",
+      phRent: "[pigione netta]", phNewRent: "[nuova pigione netta]"
+    },
+    en: {
+      monthsLong: ["January","February","March","April","May","June","July","August","September","October","November","December"],
+      monthsShort: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+      date: (d, m, y) => d + " " + m + " " + y,
+      themeAria: "Toggle dark mode",
+      hdrLabel: "Mortgage reference rate · Switzerland",
+      meta: (since, last, next) => "in force since " + since + "<br>last published " + last + " · next " + next,
+      tabCalc: "Calculator", tabHist: "History since 2008",
+      rentLabel: "Your net monthly rent",
+      rentHint: "Excluding service charges — the “net” amount in your lease.",
+      basisLabel: "Reference rate when your rent was last set",
+      ratePeriods: (r, list) => r + " applied: " + list,
+      today: "today",
+      dateSummary: "Don’t know the rate? Pick a date",
+      pickerLabel: "Lease signed",
+      pickerHint: "Pick the month your lease was signed or your rent was last adjusted.",
+      dateFeedback: (mo, r) => "In " + mo + " the rate was <strong>" + r + "</strong>. Slider updated.",
+      yrPrev: "Earlier year", yrNext: "Later year",
+      resultLabel: "Your potential rent reduction",
+      perMonth: "per month",
+      noClaim: "No reduction claim",
+      noClaimSame: (r) => "Your rent is already based on the current rate of " + r + ".",
+      noClaimUp: (p) => "The rate has risen since your rent was set — the landlord would have room for +" + p + ".",
+      enterRent: "Enter your net rent to see the amount in francs.",
+      basisArrow: (b, c) => "Basis " + b + " → today " + c + ", before offsetting inflation and cost increases.",
+      lblPct: "Reduction", lblNew: "New net rent", lblYear: "Savings per year",
+      toLetter: "Show letter template",
+      letterTitle: "Template: rent reduction request to your landlord or agency",
+      mailBtn: "Open in email app", mailSubject: "Request for rent reduction",
+      copy: "Copy text", copied: "Copied.",
+      copyFail: "Copying not possible — select the text manually.",
+      letterHint: "Fill in the bracketed placeholders and send by email or — for proof of receipt — by registered mail.",
+      notesTitle: "How the calculation works",
+      notes: [
+        "If the reference rate falls below the rate your rent is based on, you are entitled to a reduction (Art.&nbsp;270a Swiss Code of Obligations (CO), Art.&nbsp;13 rent ordinance VMWG/OBLF): <strong>2.91&nbsp;% per quarter point</strong>, with multiple steps following the official conversion table (e.g. 1.75&nbsp;% → 1.25&nbsp;% = −5.66&nbsp;%).",
+        "<strong>Caveat:</strong> landlords may offset 40&nbsp;% of accumulated inflation (Art.&nbsp;16 VMWG/OBLF) and documented cost increases — the effective result may be lower. Indexed and stepped leases are excluded.",
+        "<strong>Next step:</strong> submit the reduction request in writing to your landlord or agency, effective at the next possible termination date. The landlord must respond within 30&nbsp;days (Art.&nbsp;270a para.&nbsp;2 CO).",
+        "This tool is not legal advice."
+      ],
+      histLabel: "Reference rate 2008 – today",
+      thDate: "Effective from", thRate: "Rate", thDelta: "Change",
+      introduced: "Introduced",
+      chartAria: (r) => "Reference rate from 2008 to today, from 3.50 % down to " + r,
+      src: "Source: Swiss Federal Office for Housing (BWO/OFL) · updated after each publication",
+      stand: (d) => "As of " + d,
+      letter: (cur, neu, diff, pct, basis) => [
+        "Subject: Request for rent reduction", "",
+        "Dear Sir or Madam,", "",
+        "Rented property: [address, floor/apartment], tenant: [name]", "",
+        "Since " + fmtDate(CURRENT_SINCE) + ", the Swiss mortgage reference rate has stood at " + fmtRate(CURRENT) +
+          " (published by the Federal Office for Housing). My current net rent of " + cur +
+          " is based on a reference rate of " + basis + ".", "",
+        "Based on Art. 270a of the Swiss Code of Obligations (CO) and Art. 13 of the rent ordinance (VMWG/OBLF), " +
+          "I request that the net rent be reduced by " + pct + " as of the next possible termination date, from " +
+          cur + " to " + neu + diff + ".", "",
+        "Should you intend to offset inflation or cost increases, please provide an itemised and documented statement.", "",
+        "I kindly ask for your written response within 30 days (Art. 270a para. 2 CO).", "",
+        "Kind regards", "[First and last name]", "[Address]"
+      ],
+      diffPerMonth: (d) => " (− CHF " + d + " per month)",
+      phRent: "[net rent]", phNewRent: "[new net rent]"
+    }
+  };
+
+  let LANG = "de";
+  const S = () => I18N[LANG];
+  function fmtDate(iso) {
+    const [y, m, d] = iso.split("-").map(Number);
+    return S().date(d, S().monthsLong[m - 1], y);
+  }
+  const fmtMonth = (ym) => { const [y, m] = ym.split("-"); return S().monthsLong[+m - 1] + " " + y; };
+
+  // ---------- Theme toggle: follows the system until the icon is clicked ----------
+  const themeBtn = document.getElementById("theme-btn");
+  const darkMq = window.matchMedia("(prefers-color-scheme: dark)");
+  function effectiveDark() {
+    const t = document.documentElement.dataset.theme;
+    if (t === "dark") return true;
+    if (t === "light") return false;
+    return darkMq.matches;                    // no explicit choice: system decides
+  }
+  function updateThemeIcon() {
+    const dark = effectiveDark();
+    themeBtn.setAttribute("aria-pressed", String(dark));
+    document.getElementById("icon-sun").style.display = dark ? "" : "none";
+    document.getElementById("icon-moon").style.display = dark ? "none" : "";
+  }
+  themeBtn.addEventListener("click", () => {
+    const next = effectiveDark() ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("mietzins-theme", next); } catch (e) { /* fine */ }
+    updateThemeIcon();
+  });
+  if (darkMq.addEventListener) darkMq.addEventListener("change", updateThemeIcon);
+  updateThemeIcon();                          // stored choice was applied pre-paint
+
+  // ---------- Tabs ----------
+  const tabCalc = document.getElementById("tab-calc"), tabHist = document.getElementById("tab-hist");
+  const panelCalc = document.getElementById("panel-calc"), panelHist = document.getElementById("panel-hist");
+  let histShown = false;
+  function selectTab(which) {
+    const calc = which === "calc";
+    tabCalc.setAttribute("aria-selected", String(calc));
+    tabHist.setAttribute("aria-selected", String(!calc));
+    panelCalc.hidden = !calc;
+    panelHist.hidden = calc;
+    const shown = calc ? panelCalc : panelHist;
+    if (!REDUCED) { shown.classList.remove("pop"); void shown.offsetWidth; shown.classList.add("pop"); }
+    if (!calc && !histShown) { histShown = true; drawChartIn(); }
+  }
+  tabCalc.addEventListener("click", () => selectTab("calc"));
+  tabHist.addEventListener("click", () => selectTab("hist"));
+
+  // ---------- Rate math (official Überwälzungssätze convention) ----------
+  // Art. 13 VMWG step size, keyed to the upper end of each quarter step:
+  // 3% below a 5% rate level, 2.5% between 5-6%, 2% above 6%.
+  const stepPct = (upper) => (upper <= 5 ? 0.03 : upper <= 6 ? 0.025 : 0.02);
+
+  // Additive in the increase direction; a decrease is the exact inverse.
+  function rateChange(basis, current) {
+    let sum = 0;
+    const lo = Math.min(basis, current), hi = Math.max(basis, current);
+    for (let r = lo; r < hi - 1e-9; r = Math.round((r + 0.25) * 100) / 100) {
+      sum += stepPct(Math.round((r + 0.25) * 100) / 100);
+    }
+    return current > basis ? sum : -sum / (1 + sum);
+  }
+
+  function rateOn(ym) {                       // ym = "YYYY-MM"
+    const d = ym + "-28";                     // end of month: signing happens after any change
+    let rate = null;
+    for (const [eff, r] of SERIES) if (eff <= d) rate = r;
+    return rate;
+  }
+
+  function periodsFor(rate) {
+    const out = [];
+    for (let i = 0; i < SERIES.length; i++) {
+      if (SERIES[i][1] !== rate) continue;
+      const from = fmtMonth(SERIES[i][0].slice(0, 7));
+      const to = i + 1 < SERIES.length ? fmtMonth(SERIES[i + 1][0].slice(0, 7)) : S().today;
+      out.push(from + " – " + to);
+    }
+    return out;
+  }
+
+  // ---------- State & elements ----------
+  const $ = (id) => document.getElementById(id);
+  const RATES = [...new Set(SERIES.map((e) => e[1]))].sort((a, b) => a - b);
+  let basisRate = 1.75;                       // sensible default: the Dec-2023 wave
+  let pickedYM = null;
+
+  const rentEl = $("rent"), sliderEl = $("basis"), sliderValEl = $("basis-value"),
+        noteEl = $("chip-note"), headEl = $("headline"), subEl = $("subline"),
+        breakEl = $("breakdown"), letterSec = $("letter-sec"), letterEl = $("letter-text"),
+        toLetterEl = $("to-letter"), fbEl = $("date-feedback");
+
+  sliderEl.max = RATES.length - 1;
+  function updateSliderFill() {
+    const p = (+sliderEl.value) / (RATES.length - 1) * 100;
+    sliderEl.style.setProperty("--fill", p + "%");
+  }
+
+  function selectRate(r) {
+    basisRate = r;
+    sliderEl.value = RATES.indexOf(r);
+    sliderEl.setAttribute("aria-valuetext", fmtRate(r));
+    sliderValEl.textContent = fmtRate(r);
+    noteEl.textContent = S().ratePeriods(fmtRate(r), periodsFor(r).join(" · "));
+    updateSliderFill();
+    render();
+  }
+  sliderEl.addEventListener("input", () => selectRate(RATES[+sliderEl.value]));
+
+  // ---------- Rent input with thousand separators ----------
+  const parseRent = () => {
+    const digits = rentEl.value.replace(/\D/g, "");
+    return digits ? parseInt(digits, 10) : NaN;
+  };
+  rentEl.addEventListener("input", () => {
+    const digitsRight = (rentEl.value.slice(rentEl.selectionEnd).match(/\d/g) || []).length;
+    const digits = rentEl.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 6);
+    rentEl.value = digits ? chf.format(+digits) : "";
+    let pos = rentEl.value.length, seen = 0;
+    while (pos > 0 && seen < digitsRight) { pos--; if (/\d/.test(rentEl.value[pos])) seen++; }
+    rentEl.setSelectionRange(pos, pos);
+    render();
+  });
+
+  // ---------- Month picker ----------
+  const now = new Date();
+  const MIN_YM = SERIES[0][0].slice(0, 7);    // "2008-09"
+  const MAX_YM = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+  const MIN_YEAR = +MIN_YM.slice(0, 4), MAX_YEAR = +MAX_YM.slice(0, 4);
+  let pickerYear = MAX_YEAR;
+
+  const yrEl = $("yr"), monthsEl = $("months");
+  const monthBtns = [];
+  for (let m = 0; m < 12; m++) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "month-btn";
+    b.addEventListener("click", () => pickMonth(m + 1));
+    monthsEl.appendChild(b);
+    monthBtns.push(b);
+  }
+
+  function renderPicker() {
+    yrEl.textContent = pickerYear;
+    $("yr-prev").disabled = pickerYear <= MIN_YEAR;
+    $("yr-next").disabled = pickerYear >= MAX_YEAR;
+    for (let m = 0; m < 12; m++) {
+      const ym = pickerYear + "-" + String(m + 1).padStart(2, "0");
+      monthBtns[m].textContent = S().monthsShort[m];
+      monthBtns[m].disabled = ym < MIN_YM || ym > MAX_YM;
+      monthBtns[m].setAttribute("aria-pressed", String(ym === pickedYM));
+      monthBtns[m].setAttribute("aria-label", S().monthsLong[m] + " " + pickerYear);
+    }
+  }
+
+  function renderFeedback() {
+    fbEl.innerHTML = pickedYM === null
+      ? S().pickerHint
+      : S().dateFeedback(fmtMonth(pickedYM), fmtRate(rateOn(pickedYM)));
+  }
+
+  function pickMonth(m) {
+    pickedYM = pickerYear + "-" + String(m).padStart(2, "0");
+    renderFeedback();
+    renderPicker();
+    selectRate(rateOn(pickedYM));
+  }
+
+  $("yr-prev").addEventListener("click", () => { pickerYear = Math.max(MIN_YEAR, pickerYear - 1); renderPicker(); });
+  $("yr-next").addEventListener("click", () => { pickerYear = Math.min(MAX_YEAR, pickerYear + 1); renderPicker(); });
+
+  // ---------- Letter template (shown only on request, only with a claim) ----------
+  let letterOpen = false;
+  const mailBtn = $("mail-btn");
+
+  function letterLines(rent, change) {
+    const hasRent = Number.isFinite(rent) && rent > 0;
+    const newRent = hasRent ? Math.round(rent * (1 + change)) : null;
+    const cur = hasRent ? "CHF " + chf.format(rent) : S().phRent;
+    const neu = hasRent ? "CHF " + chf.format(newRent) : S().phNewRent;
+    const diff = hasRent ? S().diffPerMonth(chf.format(rent - newRent)) : "";
+    return S().letter(cur, neu, diff, fmtPct(change), fmtRate(basisRate));
+  }
+
+  function fillLetter(rent, change) {
+    const lines = letterLines(rent, change);
+    letterEl.textContent = lines.join("\n");
+    // mailto body: everything after the subject line and its blank separator
+    mailBtn.href = "mailto:?subject=" + encodeURIComponent(S().mailSubject) +
+      "&body=" + encodeURIComponent(lines.slice(2).join("\n"));
+  }
+
+  toLetterEl.addEventListener("click", (e) => {
+    e.preventDefault();
+    letterOpen = true;
+    render();
+    letterSec.scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "start" });
+  });
+
+  const copyBtn = $("copy-btn"), copyStatus = $("copy-status");
+  copyBtn.addEventListener("click", async () => {
+    const text = letterEl.textContent;
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; }
+    catch (e) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { ok = document.execCommand("copy"); } catch (e2) { ok = false; }
+      ta.remove();
+    }
+    copyStatus.textContent = ok ? S().copied : S().copyFail;
+    setTimeout(() => { copyStatus.textContent = ""; }, 3000);
+  });
+
+  // ---------- Count-up animation for the headline amount ----------
+  let lastMonthly = 0;
+  function animateNumber(el, from, to) {
+    if (REDUCED || from === to) { el.textContent = chf.format(to); return; }
+    const t0 = performance.now(), dur = 480;
+    (function tick(t) {
+      const p = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = chf.format(Math.round(from + (to - from) * eased));
+      if (p < 1) requestAnimationFrame(tick);
+    })(t0);
+  }
+  function popIn(el) {
+    if (REDUCED) return;
+    el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
+  }
+
+  // ---------- Result ----------
+  function render() {
+    const rent = parseRent();
+    const hasRent = Number.isFinite(rent) && rent > 0;
+    const change = rateChange(basisRate, CURRENT);
+
+    if (change === 0 || change > 0) {
+      headEl.textContent = S().noClaim;
+      headEl.className = "headline neutral";
+      subEl.textContent = change === 0 ? S().noClaimSame(fmtRate(CURRENT)) : S().noClaimUp(fmtPct(change));
+      breakEl.hidden = true;
+      letterOpen = false;                     // no claim: the letter is off the table
+      letterSec.hidden = true;
+      toLetterEl.hidden = true;
+      lastMonthly = 0;
+      popIn(headEl);
+      return;
+    }
+
+    toLetterEl.hidden = false;
+    letterSec.hidden = !letterOpen;
+    if (letterOpen) {
+      letterSec.classList.add("in");
+      fillLetter(rent, change);
+    }
+
+    if (!hasRent) {
+      headEl.textContent = "−" + fmtPct(change);
+      headEl.className = "headline";
+      subEl.textContent = S().enterRent;
+      breakEl.hidden = true;
+      lastMonthly = 0;
+      popIn(headEl);
+      return;
+    }
+
+    const newRent = Math.round(rent * (1 + change));
+    const monthly = rent - newRent;
+    const animate = headEl.querySelector("#head-num") !== null;
+    headEl.innerHTML = "−<span id=\"head-num\">" + chf.format(lastMonthly) +
+      "</span>" + NBSP + "CHF <span class=\"per\">" + S().perMonth + "</span>";
+    headEl.className = "headline";
+    animateNumber($("head-num"), animate ? lastMonthly : monthly, monthly);
+    lastMonthly = monthly;
+    subEl.textContent = S().basisArrow(fmtRate(basisRate), fmtRate(CURRENT));
+    $("out-pct").textContent = "−" + fmtPct(change);
+    $("out-new").textContent = chf.format(newRent) + NBSP + "CHF";
+    $("out-year").textContent = chf.format(monthly * 12) + NBSP + "CHF";
+    breakEl.hidden = false;
+  }
+
+  // ---------- History table ----------
+  function buildTable() {
+    const rows = $("hist-rows");
+    let html = "";
+    for (let i = SERIES.length - 1; i >= 0; i--) {
+      const [eff, r] = SERIES[i];
+      let delta = S().introduced, cls = "delta";
+      if (i > 0) {
+        const step = r - SERIES[i - 1][1];
+        delta = (step > 0 ? "+" : "−") + Math.abs(step).toFixed(2);
+        if (step < 0) cls = "delta down";
+      }
+      html += `<tr><td>${fmtDate(eff)}</td><td class="rate">${fmtRate(r)}</td><td class="${cls}">${delta}</td></tr>`;
+    }
+    rows.innerHTML = html;
+  }
+
+  // ---------- History chart (built once; language only affects tooltip/aria) ----------
+  let chartSvg = null, chartPath = null, chartEnd = null;
+  (function buildChart() {
+    const W = 760, H = 260, L = 46, R = 66, T = 16, B = 30;
+    const t0 = 2008.6, t1 = now.getFullYear() + (now.getMonth() + 0.5) / 12;
+    const y0 = 1.0, y1 = 3.75;
+    const X = (t) => L + (t - t0) / (t1 - t0) * (W - L - R);
+    const Y = (v) => T + (y1 - v) / (y1 - y0) * (H - T - B);
+    const toT = (iso) => { const [y, m, d] = iso.split("-").map(Number); return y + (m - 1 + (d - 1) / 30) / 12; };
+
+    let s = "";
+    for (const v of [1.5, 2.0, 2.5, 3.0, 3.5]) {
+      s += `<line class="chart-grid" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"></line>`;
+      s += `<text class="chart-axis-text" x="${L - 8}" y="${Y(v) + 3.5}" text-anchor="end">${v.toFixed(2)}</text>`;
+    }
+    for (const yr of [2010, 2014, 2018, 2022, 2026]) {
+      s += `<text class="chart-axis-text" x="${X(yr)}" y="${H - 6}" text-anchor="middle">${yr}</text>`;
+    }
+    let d = "";
+    for (let i = 0; i < SERIES.length; i++) {
+      const x = X(toT(SERIES[i][0])), y = Y(SERIES[i][1]);
+      d += i === 0 ? `M ${x.toFixed(1)} ${y.toFixed(1)}` : ` H ${x.toFixed(1)} V ${y.toFixed(1)}`;
+    }
+    d += ` H ${X(t1).toFixed(1)}`;
+    s += `<line class="chart-cursor" id="cursor" x1="0" x2="0" y1="${T}" y2="${H - B}" style="display:none"></line>`;
+    s += `<path class="chart-line" id="chart-path" d="${d}"></path>`;
+    const ex = X(t1), ey = Y(CURRENT);
+    s += `<g id="chart-endg"><rect class="chart-end" x="${ex - 4}" y="${ey - 4}" width="8" height="8" rx="2.5"></rect>` +
+         `<text class="chart-end-label" x="${ex + 10}" y="${ey + 4}">${fmtRate(CURRENT)}</text></g>`;
+
+    const wrap = $("chart-wrap");
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.setAttribute("role", "img");
+    svg.innerHTML = s;
+    wrap.appendChild(svg);
+    chartSvg = svg;
+    chartPath = svg.querySelector("#chart-path");
+    chartEnd = svg.querySelector("#chart-endg");
+
+    const tip = $("chart-tip"), cursor = svg.querySelector("#cursor");
+    function onMove(ev) {
+      const rect = svg.getBoundingClientRect();
+      const px = (ev.clientX - rect.left) / rect.width * W;
+      if (px < L || px > W - R) { onLeave(); return; }
+      const t = t0 + (px - L) / (W - L - R) * (t1 - t0);
+      const yr = Math.floor(t), mo = Math.min(11, Math.max(0, Math.floor((t - yr) * 12)));
+      const r = rateOn(yr + "-" + String(mo + 1).padStart(2, "0"));
+      if (r === null) { onLeave(); return; }
+      cursor.style.display = "";
+      cursor.setAttribute("x1", px); cursor.setAttribute("x2", px);
+      tip.style.display = "block";
+      tip.style.left = (px / W * 100) + "%";
+      tip.style.top = (Y(r) / H * 100 - 18) + "%";
+      tip.textContent = S().monthsShort[mo] + " " + yr + " · " + fmtRate(r);
+    }
+    function onLeave() { tip.style.display = "none"; cursor.style.display = "none"; }
+    svg.addEventListener("mousemove", onMove);
+    svg.addEventListener("mouseleave", onLeave);
+  })();
+
+  // Draw the line in when the history tab is first opened.
+  function drawChartIn() {
+    if (REDUCED || !chartPath) return;
+    const len = chartPath.getTotalLength();
+    chartPath.style.strokeDasharray = len;
+    chartPath.style.strokeDashoffset = len;
+    chartEnd.style.opacity = "0";
+    requestAnimationFrame(() => {
+      chartPath.style.transition = "stroke-dashoffset 0.9s cubic-bezier(0.3, 0.6, 0.2, 1)";
+      chartPath.style.strokeDashoffset = "0";
+      setTimeout(() => {
+        chartEnd.style.transition = "opacity 0.4s ease";
+        chartEnd.style.opacity = "1";
+        chartPath.style.strokeDasharray = "none";
+      }, 900);
+    });
+  }
+
+  // ---------- Scroll reveals ----------
+  if ("IntersectionObserver" in window && !REDUCED) {
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+    }, { threshold: 0.12 });
+    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+  } else {
+    document.querySelectorAll(".reveal").forEach((el) => el.classList.add("in"));
+  }
+
+  // ---------- Language ----------
+  const langToggle = document.getElementById("lang-toggle");
+  function applyLang(lang) {
+    LANG = I18N[lang] ? lang : "de";
+    try { localStorage.setItem("mietzins-lang", LANG); } catch (e) { /* fine */ }
+    document.documentElement.lang = LANG;
+    for (const b of langToggle.children) {
+      b.setAttribute("aria-pressed", String(b.dataset.lang === LANG));
+    }
+    const s = S();
+    // header
+    $("hdr-label").textContent = s.hdrLabel;
+    $("current-rate").innerHTML = CURRENT.toFixed(2) + " %";
+    $("rate-meta").innerHTML = s.meta(fmtDate(CURRENT_SINCE), fmtDate(DATA.announcedOn), fmtDate(DATA.nextAnnouncement));
+    themeBtn.setAttribute("aria-label", s.themeAria);
+    tabCalc.textContent = s.tabCalc;
+    tabHist.textContent = s.tabHist;
+    // inputs
+    $("rent-label").textContent = s.rentLabel;
+    $("rent-hint").textContent = s.rentHint;
+    $("basis-label").textContent = s.basisLabel;
+    $("date-summary").textContent = s.dateSummary;
+    $("picker-label").textContent = s.pickerLabel;
+    $("yr-prev").setAttribute("aria-label", s.yrPrev);
+    $("yr-next").setAttribute("aria-label", s.yrNext);
+    // result & letter
+    $("result-label").textContent = s.resultLabel;
+    $("lbl-pct").textContent = s.lblPct;
+    $("lbl-new").textContent = s.lblNew;
+    $("lbl-year").textContent = s.lblYear;
+    toLetterEl.textContent = s.toLetter;
+    $("letter-title").textContent = s.letterTitle;
+    mailBtn.textContent = s.mailBtn;
+    copyBtn.textContent = s.copy;
+    $("letter-hint").textContent = s.letterHint;
+    // notes
+    $("notes-title").textContent = s.notesTitle;
+    $("notes-body").innerHTML = s.notes.map((p) => "<p>" + p + "</p>").join("");
+    // history
+    $("hist-label").textContent = s.histLabel;
+    $("th-date").textContent = s.thDate;
+    $("th-rate").textContent = s.thRate;
+    $("th-delta").textContent = s.thDelta;
+    if (chartSvg) chartSvg.setAttribute("aria-label", s.chartAria(fmtRate(CURRENT)));
+    // footer
+    $("src").textContent = s.src;
+    $("stand").textContent = s.stand(fmtDate(DATA.announcedOn));
+    // dynamic re-renders
+    renderPicker();
+    renderFeedback();
+    selectRate(basisRate);
+    buildTable();
+  }
+  langToggle.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-lang]");
+    if (btn) applyLang(btn.dataset.lang);
+  });
+
+  {
+    let lang = null;
+    try { lang = localStorage.getItem("mietzins-lang"); } catch (e) { /* fine */ }
+    if (!I18N[lang]) {
+      const nav = (navigator.language || "de").slice(0, 2).toLowerCase();
+      lang = I18N[nav] ? nav : "de";
+    }
+    applyLang(lang);
+  }
+</script>
