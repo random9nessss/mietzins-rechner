@@ -117,12 +117,22 @@ The site offers an email alert for the next rate decrease. There is no
 newsletter service and no stored list — **the info@zinscheck.ch mailbox
 (Infomaniak) is the database**:
 
-- Subscribing = sending a mail with subject `ABO` (the site's button
-  pre-fills it via `mailto:`, with a `[DE]`/`[FR]`/`[IT]`/`[EN]` language
-  tag). Unsubscribing = subject `STOP`. Latest instruction per address wins.
-  Sender ownership is verified by construction. ABO mails may be moved into
-  a folder named `Abo`; they still count. Do not delete them — a deleted
-  ABO mail is an unsubscribe.
+- The signup lives prominently in the hero. It has two modes, switched by
+  the `NEWSLETTER` config object in `index.html`:
+  - **Form mode** (when `NEWSLETTER.action` is set): email field + Subscribe
+    button POSTing to an Infomaniak **Newsletter** embed form. Infomaniak
+    sends the double-opt-in confirmation mail and hosts the confirmed list;
+    unsubscribing is the link in every campaign mail. To activate: Infomaniak
+    Manager → Newsletter → create a form → Embed code (HTML tab) → copy the
+    form's action URL, email field name, and hidden inputs into `NEWSLETTER`.
+    Sending to this list happens via Infomaniak campaigns (dashboard or API),
+    not via the SMTP script below.
+  - **Fallback mode** (action empty, current state): a `mailto:` button —
+    subscribing = sending a mail with subject `ABO` (pre-filled, with a
+    `[DE]`/`[FR]`/`[IT]`/`[EN]` language tag), unsubscribing = subject
+    `STOP`. Latest instruction per address wins; ownership is verified by
+    construction. ABO mails may be moved into a folder named `Abo`; they
+    still count. Do not delete them — a deleted ABO mail is an unsubscribe.
 - When the quarterly workflow (`update-rate.yml`) detects a genuine
   **decrease**, `scripts/notify_subscribers.py` scans the mailbox over IMAP
   and sends one localized plain-text mail per subscriber over Infomaniak

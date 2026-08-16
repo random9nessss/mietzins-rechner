@@ -97,6 +97,7 @@
   .hero > :nth-child(1) { animation-delay: 0.05s; }
   .hero > :nth-child(2) { animation-delay: 0.13s; }
   .hero > :nth-child(3) { animation-delay: 0.21s; }
+  .hero > :nth-child(4) { animation-delay: 0.29s; }
   .tabs-row            { animation-delay: 0.30s; }
   .card.first          { animation-delay: 0.38s; }
   .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1); }
@@ -525,9 +526,43 @@
 
   /* ---------- Notes & footer ---------- */
   section.notes { padding: 8px 8px 0; }
-  #subscribe-sec .sub-cta { margin: 16px 0 4px; }
-  #subscribe-sec .sub-cta a.mail { display: inline-block; }
-  #subscribe-sec .hint { max-width: 62ch; }
+
+  /* ---------- Hero signup (rate-drop email alert) ---------- */
+  .sub-hero { margin-top: 30px; }
+  .sub-hero-title { font-size: 14px; font-weight: 600; color: var(--ink); margin: 0 0 12px; }
+  .sub-form { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .sub-form input {
+    width: min(320px, 100%);
+    padding: 11px 18px;
+    font: inherit;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--pill);
+    border: 1px solid transparent;
+    border-radius: 999px;
+    transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .sub-form input:hover { background: var(--hover); }
+  .sub-form input:focus { outline: none; background: var(--card); border-color: var(--accent); box-shadow: 0 0 0 4px var(--ring); }
+  .sub-submit {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    padding: 11px 22px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .sub-submit:hover { background: var(--accent-hover); }
+  .sub-submit:active { transform: scale(0.96); }
+  .sub-submit:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring); }
+  .sub-hero .sub-cta { margin: 0; }
+  .sub-hero .sub-cta a.mail { display: inline-block; }
+  .sub-hero .hint { max-width: 56ch; margin: 12px auto 0; }
   @media (min-width: 860px) { .notes-cols { columns: 2; column-gap: 48px; } }
   .notes p { font-size: 13px; line-height: 1.62; color: var(--muted); margin: 0 0 10px; max-width: 58ch; break-inside: avoid; }
   .notes p strong { color: var(--ink); font-weight: 600; }
@@ -612,6 +647,15 @@
     <span class="eyebrow" id="hdr-label"></span>
     <p class="figure" id="current-rate">–</p>
     <p class="meta" id="rate-meta"></p>
+    <div class="sub-hero" id="sub-hero">
+      <p class="sub-hero-title" id="sub-title"></p>
+      <form class="sub-form" id="sub-form" method="post" target="_blank" hidden>
+        <input type="email" id="sub-email" autocomplete="email" spellcheck="false" required>
+        <button type="submit" class="sub-submit" id="sub-submit"></button>
+      </form>
+      <p class="sub-cta" id="sub-fallback" hidden><a class="mail" id="sub-btn" href="#"></a></p>
+      <p class="hint" id="sub-hint"></p>
+    </div>
   </header>
 
   <div class="tabs-row">
@@ -717,13 +761,6 @@
     </section>
   </div>
 
-  <section class="notes reveal" id="subscribe-sec">
-    <h2 id="sub-title"></h2>
-    <p id="sub-text"></p>
-    <p class="sub-cta"><a class="mail" id="sub-btn" href="#"></a></p>
-    <p class="hint" id="sub-hint"></p>
-  </section>
-
   <footer>
     <span id="visits" hidden><span id="visits-num"></span> <span id="visits-label"></span></span>
     <span id="src"></span>
@@ -741,6 +778,30 @@
   const CURRENT = SERIES[SERIES.length - 1][1];
   const CURRENT_SINCE = SERIES[SERIES.length - 1][0];
   const SUBSCRIBE_ADDR = "info@zinscheck.ch";   // scanned by scripts/notify_subscribers.py
+
+  // ---------- Newsletter signup (Infomaniak, double opt-in) ----------
+  // Paste the values from Infomaniak Manager -> Newsletter -> Forms -> (...)
+  // -> Embed code, HTML tab: the form's action URL, the email input's name
+  // attribute, and every hidden input (name -> value). While `action` is
+  // empty the page falls back to the mailto:ABO flow that
+  // scripts/notify_subscribers.py reads from the mailbox.
+  const NEWSLETTER = {
+    action: "",
+    emailField: "email",
+    hidden: {}
+  };
+  if (NEWSLETTER.action) {
+    const subFormEl = document.getElementById("sub-form");
+    subFormEl.action = NEWSLETTER.action;
+    document.getElementById("sub-email").name = NEWSLETTER.emailField;
+    for (const key in NEWSLETTER.hidden) {
+      const h = document.createElement("input");
+      h.type = "hidden";
+      h.name = key;
+      h.value = NEWSLETTER.hidden[key];
+      subFormEl.appendChild(h);
+    }
+  }
 
   const chf = new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 });
   const NBSP = " ";                       // never wrap before the % sign
@@ -798,7 +859,9 @@
       visitsLabel: "Besuche",
       stand: (d) => "Stand: " + d,
       subTitle: "E-Mail-Erinnerung: die nächste Senkung nicht verpassen",
-      subText: "Der Referenzzinssatz wird viermal im Jahr überprüft. Tragen Sie sich ein und Sie erhalten genau dann eine E-Mail, wenn der Satz sinkt und ein Senkungsbegehren möglich wird — keine Werbung, keine weiteren E-Mails.",
+      subPlaceholder: "E-Mail-Adresse",
+      subSubmit: "Abonnieren",
+      subFormHint: "Eine E-Mail nur dann, wenn der Referenzzinssatz sinkt — keine Werbung. Sie erhalten zuerst eine Bestätigungs-E-Mail: Anmeldung mit einem Klick auf den Link darin abschliessen. Abmeldung jederzeit über den Link in jeder E-Mail.",
       subBtn: "Per E-Mail anmelden",
       subMailSubject: "ABO Zinscheck [DE]",
       subMailBody: "Bitte benachrichtigt mich, wenn der Referenzzinssatz sinkt.\n\n(Diese E-Mail einfach unverändert absenden — fertig.)",
@@ -868,7 +931,9 @@
       visitsLabel: "visites",
       stand: (d) => "État au " + d,
       subTitle: "Alerte e-mail : ne manquez pas la prochaine baisse",
-      subText: "Le taux de référence est réexaminé quatre fois par an. Inscrivez-vous et vous recevrez un e-mail précisément lorsque le taux baisse et qu’une demande de baisse devient possible — pas de publicité, pas d’autres e-mails.",
+      subPlaceholder: "Adresse e-mail",
+      subSubmit: "S’abonner",
+      subFormHint: "Un e-mail uniquement lorsque le taux de référence baisse — pas de publicité. Vous recevrez d’abord un e-mail de confirmation : terminez l’inscription en cliquant sur le lien qu’il contient. Désinscription à tout moment via le lien dans chaque e-mail.",
       subBtn: "S’inscrire par e-mail",
       subMailSubject: "ABO Zinscheck [FR]",
       subMailBody: "Merci de m’informer lorsque le taux de référence baisse.\n\n(Envoyez simplement cet e-mail tel quel.)",
@@ -938,7 +1003,9 @@
       visitsLabel: "visite",
       stand: (d) => "Stato al " + d,
       subTitle: "Avviso e-mail: non perdere il prossimo ribasso",
-      subText: "Il tasso di riferimento viene riesaminato quattro volte l’anno. Si iscriva e riceverà un’e-mail esattamente quando il tasso scende e una richiesta di riduzione diventa possibile — niente pubblicità, nessun’altra e-mail.",
+      subPlaceholder: "Indirizzo e-mail",
+      subSubmit: "Iscriviti",
+      subFormHint: "Un’e-mail solo quando il tasso di riferimento scende — niente pubblicità. Riceverà prima un’e-mail di conferma: completi l’iscrizione cliccando sul link contenuto. Disiscrizione in ogni momento tramite il link in ogni e-mail.",
       subBtn: "Iscriversi via e-mail",
       subMailSubject: "ABO Zinscheck [IT]",
       subMailBody: "Vi prego di informarmi quando il tasso di riferimento scende.\n\n(Basta inviare questa e-mail così com’è.)",
@@ -1008,7 +1075,9 @@
       visitsLabel: "visits",
       stand: (d) => "As of " + d,
       subTitle: "Email alert: don’t miss the next cut",
-      subText: "The reference rate is reviewed four times a year. Sign up and you’ll get one email exactly when the rate drops and a reduction request becomes possible — no ads, no other emails.",
+      subPlaceholder: "Email address",
+      subSubmit: "Subscribe",
+      subFormHint: "One email only when the reference rate drops — no ads. You’ll first receive a confirmation email: complete the signup by clicking the link in it. Unsubscribe any time via the link in every email.",
       subBtn: "Sign up by email",
       subMailSubject: "ABO Zinscheck [EN]",
       subMailBody: "Please notify me when the reference interest rate drops.\n\n(Just send this email as it is.)",
@@ -1468,15 +1537,25 @@
     $("th-rate").textContent = s.thRate;
     $("th-delta").textContent = s.thDelta;
     if (chartSvg) chartSvg.setAttribute("aria-label", s.chartAria(fmtRate(CURRENT)));
-    // subscription
+    // subscription (hero)
     $("sub-title").textContent = s.subTitle;
-    $("sub-text").textContent = s.subText;
-    $("sub-hint").textContent = s.subHint(SUBSCRIBE_ADDR);
-    const subBtnEl = $("sub-btn");
-    subBtnEl.textContent = s.subBtn;
-    subBtnEl.href = "mailto:" + SUBSCRIBE_ADDR +
-      "?subject=" + encodeURIComponent(s.subMailSubject) +
-      "&body=" + encodeURIComponent(s.subMailBody);
+    if (NEWSLETTER.action) {
+      $("sub-form").hidden = false;
+      $("sub-fallback").hidden = true;
+      const subInput = $("sub-email");
+      subInput.placeholder = s.subPlaceholder;
+      subInput.setAttribute("aria-label", s.subPlaceholder);
+      $("sub-submit").textContent = s.subSubmit;
+      $("sub-hint").textContent = s.subFormHint;
+    } else {
+      $("sub-fallback").hidden = false;
+      const subBtnEl = $("sub-btn");
+      subBtnEl.textContent = s.subBtn;
+      subBtnEl.href = "mailto:" + SUBSCRIBE_ADDR +
+        "?subject=" + encodeURIComponent(s.subMailSubject) +
+        "&body=" + encodeURIComponent(s.subMailBody);
+      $("sub-hint").textContent = s.subHint(SUBSCRIBE_ADDR);
+    }
     // footer
     $("src").textContent = s.src;
     $("contact-label").textContent = s.contactLabel;
