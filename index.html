@@ -532,7 +532,7 @@
   details.sub-details summary {
     font-size: 14px;
     font-weight: 600;
-    color: var(--muted);
+    color: var(--accent);
     cursor: pointer;
     list-style: none;
     display: inline-flex;
@@ -550,7 +550,7 @@
     transition: transform 0.25s ease;
   }
   details.sub-details[open] summary::after { transform: rotate(225deg) translateY(-1px); }
-  details.sub-details summary:hover, details.sub-details[open] summary { color: var(--ink); }
+  details.sub-details summary:hover, details.sub-details[open] summary { color: var(--accent-hover); }
   .sub-body { margin-top: 14px; }
   .sub-form { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   .sub-form input {
