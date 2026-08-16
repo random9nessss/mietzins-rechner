@@ -7,11 +7,12 @@ Recipients are merged from two sources, then de-duplicated:
      "STOP" unsubscribes; per address the most recent instruction wins.
   2. The Infomaniak Newsletter subscriber list (REST API): filled by the
      site's signup form with Infomaniak's double opt-in; only status
-     "active" counts. Language: membership in a group whose name contains
-     DE/FR/IT/EN as a word (e.g. "Zinscheck FR"); default is German. The
-     Newsletter product is used purely as the double-opt-in front door —
-     sending always happens here via SMTP (free, localized), never via
-     paid campaign credits.
+     "active" counts. Their language is unknown, so they receive the
+     compact all-languages mail (TEMPLATES["multi"]); membership in a
+     group whose name contains DE/FR/IT/EN as a word (e.g. "Zinscheck FR")
+     overrides to that single language. The Newsletter product is used
+     purely as the double-opt-in front door — sending always happens here
+     via SMTP (free), never via paid campaign credits.
 
 A mailbox STOP always wins, including over the API list. Sending is one
 localized plain-text mail per subscriber over Infomaniak SMTP.
@@ -167,7 +168,46 @@ TEMPLATES = {
     },
 }
 
-DATE_FMT = {"de": "%d.%m.%Y", "fr": "%d.%m.%Y", "it": "%d.%m.%Y", "en": "%d.%m.%Y"}
+# Newsletter-form subscribers have no known language: they get one compact
+# mail with all four languages (Swiss-official style, DE first).
+TEMPLATES["multi"] = {
+    "subject": "Referenzzinssatz neu {new} % — Senkung prüfen · Vérifiez votre loyer · "
+               "Verifichi la pigione · Check your rent",
+    "body": (
+        "Guten Tag / Bonjour / Buongiorno / Hello\n"
+        "\n"
+        "DE — Der hypothekarische Referenzzinssatz ist per {eff} von {old} % auf {new} % "
+        "gesunken. Beruht Ihre Miete auf {old} %, können Sie eine Senkung von rund {pct} % "
+        "verlangen — bei höherem Basissatz entsprechend mehr. Auf {site} berechnen Sie Ihr "
+        "Potenzial und erhalten die passende Briefvorlage.\n"
+        "\n"
+        "FR — Le taux d'intérêt de référence hypothécaire est passé de {old} % à {new} % "
+        "au {eff}. Si votre loyer repose sur {old} %, vous pouvez demander une baisse "
+        "d'environ {pct} % — davantage si le taux de base est plus élevé. Calculez votre "
+        "potentiel et obtenez le modèle de lettre sur {site}.\n"
+        "\n"
+        "IT — Il tasso d'interesse di riferimento ipotecario è sceso dal {old} % al {new} % "
+        "con effetto dal {eff}. Se la Sua pigione si basa sul {old} %, può chiedere una "
+        "riduzione di circa {pct} % — di più con un tasso di base superiore. Calcoli il Suo "
+        "potenziale su {site}.\n"
+        "\n"
+        "EN — The Swiss mortgage reference interest rate dropped from {old} % to {new} % "
+        "effective {eff}. If your rent is based on {old} %, you can request a reduction of "
+        "about {pct} % — more if it is based on a higher rate. Calculate your potential "
+        "at {site}.\n"
+        "\n"
+        "Freundliche Grüsse / Meilleures salutations / Cordiali saluti / Kind regards\n"
+        "Zinscheck\n"
+        "\n"
+        "--\n"
+        "Abmelden / Se désinscrire / Disiscriversi / Unsubscribe:\n"
+        "Antwort mit Betreff «STOP» genügt / répondez avec l'objet « STOP » / "
+        "risponda con oggetto «STOP» / reply with subject \"STOP\".\n"
+    ),
+}
+
+DATE_FMT = {"de": "%d.%m.%Y", "fr": "%d.%m.%Y", "it": "%d.%m.%Y", "en": "%d.%m.%Y",
+            "multi": "%d.%m.%Y"}
 
 
 def fail(msg: str) -> None:
@@ -263,11 +303,12 @@ def collect_api_subscribers(token: str) -> dict[str, str]:
         for s in batch:
             addr = (s.get("email") or "").strip().lower()
             if addr and s.get("status") == "active":
-                subs[addr] = "de"
+                subs[addr] = "multi"
         if len(batch) < 500:
             break
         page += 1
-    # language comes from membership in a group named e.g. "Zinscheck FR"
+    # membership in a group named e.g. "Zinscheck FR" narrows the
+    # all-languages default down to that single language
     for group in _api_get(token, "/groups"):
         m = GROUP_LANG_RE.search(group.get("name", ""))
         if not m:
@@ -437,6 +478,11 @@ def selftest() -> None:
         assert "1.50" in body and "1.25" in body and "2.91" in body, lang
         assert SITE in body and "STOP" in body, lang
         assert "1.25" in msg["Subject"], lang
+    # the all-languages mail must actually carry all four languages
+    multi = build_mail("multi", "info@zinscheck.ch", "x@example.org",
+                       1.50, 1.25, date(2026, 9, 2)).get_content()
+    for marker in ("DE —", "FR —", "IT —", "EN —", "Abmelden", "Unsubscribe"):
+        assert marker in multi, marker
     # sanity on the engine convention: 1.75 -> 1.25 must be -5.66 %
     assert abs(abs(reference_rate_change_pct(1.75, 1.25)) * 100 - 5.66) < 0.01
     # the real series must load, be chronological, and contain a decrease
