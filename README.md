@@ -119,12 +119,16 @@ newsletter service and no stored list — **the info@zinscheck.ch mailbox
 
 - The signup lives prominently in the hero. It has two modes, switched by
   the `NEWSLETTER` config object in `index.html`:
-  - **Form mode** (when `NEWSLETTER.action` is set): email field + Subscribe
-    button POSTing to an Infomaniak **Newsletter** embed form. Infomaniak
-    sends the double-opt-in confirmation mail and hosts the confirmed list
-    (product id 64976). To activate: Infomaniak Manager → Newsletter →
-    create a form → Embed code (HTML tab) → copy the form's action URL,
-    email field name, and hidden inputs into `NEWSLETTER`. The Newsletter
+  - **Form mode** (ACTIVE — `NEWSLETTER.action` is set): email field +
+    Subscribe button submitting to the Infomaniak **Newsletter** webform
+    (id 25434). Infomaniak sends the double-opt-in confirmation mail and
+    hosts the confirmed list (product id 64976). Protocol quirks, handled
+    in vanilla JS with no external scripts: the endpoint speaks JSONP GET
+    (its POST has no CORS headers), requires an Altcha SHA-256
+    proof-of-work (challenge endpoint is CORS-open; solved with WebCrypto,
+    ~1 s), two honeypot fields must be sent empty, and the `redir` in the
+    success response is deliberately ignored in favor of an inline
+    localized confirmation hint. The Newsletter
     product is only the signup front door: at send time the SMTP script
     below reads the confirmed subscribers via the Infomaniak REST API
     (`INFOMANIAK_TOKEN` secret) and merges them with the mailbox list — no

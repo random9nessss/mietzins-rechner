@@ -579,6 +579,9 @@
   .sub-hero .sub-cta { margin: 0; }
   .sub-hero .sub-cta a.mail { display: inline-block; }
   .sub-hero .hint { max-width: 56ch; margin: 12px auto 0; }
+  .sub-hero .hint.ok { color: var(--ink); }
+  .sub-hero .hint.err { color: var(--accent); }
+  .sub-submit:disabled { opacity: 0.6; cursor: default; }
   @media (min-width: 860px) { .notes-cols { columns: 2; column-gap: 48px; } }
   .notes p { font-size: 13px; line-height: 1.62; color: var(--muted); margin: 0 0 10px; max-width: 58ch; break-inside: avoid; }
   .notes p strong { color: var(--ink); font-weight: 600; }
@@ -796,27 +799,55 @@
   const SUBSCRIBE_ADDR = "info@zinscheck.ch";   // scanned by scripts/notify_subscribers.py
 
   // ---------- Newsletter signup (Infomaniak, double opt-in) ----------
-  // Paste the values from Infomaniak Manager -> Newsletter -> Forms -> (...)
-  // -> Embed code, HTML tab: the form's action URL, the email input's name
-  // attribute, and every hidden input (name -> value). While `action` is
-  // empty the page falls back to the mailto:ABO flow that
-  // scripts/notify_subscribers.py reads from the mailbox.
+  // Values from the Infomaniak webform embed (Manager -> Newsletter -> Forms
+  // -> Embed code). Their endpoint speaks JSONP GET (no CORS on POST) and
+  // requires an Altcha proof-of-work, which we solve with WebCrypto — no
+  // external scripts. Setting `action` to "" reverts to the mailto:ABO flow.
   const NEWSLETTER = {
-    action: "",
-    emailField: "email",
-    hidden: {}
-  };
-  if (NEWSLETTER.action) {
-    const subFormEl = document.getElementById("sub-form");
-    subFormEl.action = NEWSLETTER.action;
-    document.getElementById("sub-email").name = NEWSLETTER.emailField;
-    for (const key in NEWSLETTER.hidden) {
-      const h = document.createElement("input");
-      h.type = "hidden";
-      h.name = key;
-      h.value = NEWSLETTER.hidden[key];
-      subFormEl.appendChild(h);
+    action: "https://newsletter.infomaniak.com/v3/api/1/newsletters/webforms/25434/submit",
+    challenge: "https://newsletter.infomaniak.com/v3/altcha-challenge",
+    emailField: "inf[1]",
+    fields: {
+      key: "eyJpdiI6Imx4Mlwvck9cLzZUQ00weHZYeTA3Tzc3N3lWeVk3eFwvQ0dLNzhcL2lXblV5cGc4PSIsIm1hYyI6IjQ1ZDZhNWY3Y2UzN2MwZGNiZTkwOWY2YzZlYTIxODkwNzFjZTYzNjA1MjMwYmI0N2QxMDRjZmZmMTk4MDAzMDYiLCJ2YWx1ZSI6IkN1dVNMTVlkSlRKOVFPU1wvSTRxRjY2NFBKY0ErclhlS0g1dWxEWHZuV2RBPSJ9",
+      webform_id: "25434",
+      inf_email_check: "",   // honeypots — must be sent, and sent empty
+      website: ""
     }
+  };
+  let subState = "idle";     // idle | busy | done | error
+
+  async function solveAltcha() {
+    const ch = await (await fetch(NEWSLETTER.challenge)).json();
+    const enc = new TextEncoder();
+    for (let n = 0; n <= ch.maxNumber; n++) {
+      const digest = await crypto.subtle.digest("SHA-256", enc.encode(ch.salt + n));
+      let hex = "";
+      for (const b of new Uint8Array(digest)) hex += b.toString(16).padStart(2, "0");
+      if (hex === ch.challenge) {
+        return btoa(JSON.stringify({
+          algorithm: ch.algorithm, challenge: ch.challenge, number: n,
+          salt: ch.salt, signature: ch.signature, took: 1
+        }));
+      }
+    }
+    throw new Error("altcha unsolved");
+  }
+
+  function submitJsonp(altcha, email) {
+    return new Promise((resolve, reject) => {
+      const cb = "zcb" + Date.now().toString(36);
+      const params = new URLSearchParams(NEWSLETTER.fields);
+      params.set(NEWSLETTER.emailField, email);
+      params.set("altcha", altcha);
+      params.set("callback", cb);
+      const tag = document.createElement("script");
+      const timer = setTimeout(() => { cleanup(); reject(new Error("timeout")); }, 20000);
+      function cleanup() { clearTimeout(timer); delete window[cb]; tag.remove(); }
+      window[cb] = (res) => { cleanup(); resolve(res); };
+      tag.onerror = () => { cleanup(); reject(new Error("network")); };
+      tag.src = NEWSLETTER.action + "?" + params.toString();
+      document.head.appendChild(tag);
+    });
   }
 
   const chf = new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 });
@@ -877,6 +908,9 @@
       subTitle: "E-Mail-Erinnerung: die nächste Senkung nicht verpassen",
       subPlaceholder: "E-Mail-Adresse",
       subSubmit: "Abonnieren",
+      subBusy: "Einen Moment …",
+      subDone: "Fast geschafft! Wir haben Ihnen soeben eine E-Mail gesendet — bitte klicken Sie auf den Bestätigungslink darin. (Auch den Spam-Ordner prüfen.)",
+      subError: "Anmeldung fehlgeschlagen — bitte versuchen Sie es in ein paar Minuten erneut.",
       subFormHint: "Eine E-Mail nur dann, wenn der Referenzzinssatz sinkt — keine Werbung. Sie erhalten zuerst eine Bestätigungs-E-Mail: Anmeldung mit einem Klick auf den Link darin abschliessen. Abmeldung jederzeit über den Link in jeder E-Mail.",
       subBtn: "Per E-Mail anmelden",
       subMailSubject: "ABO Zinscheck [DE]",
@@ -949,6 +983,9 @@
       subTitle: "Alerte e-mail : ne manquez pas la prochaine baisse",
       subPlaceholder: "Adresse e-mail",
       subSubmit: "S’abonner",
+      subBusy: "Un instant …",
+      subDone: "Presque terminé ! Nous venons de vous envoyer un e-mail — cliquez sur le lien de confirmation qu’il contient. (Vérifiez aussi le dossier spam.)",
+      subError: "L’inscription a échoué — veuillez réessayer dans quelques minutes.",
       subFormHint: "Un e-mail uniquement lorsque le taux de référence baisse — pas de publicité. Vous recevrez d’abord un e-mail de confirmation : terminez l’inscription en cliquant sur le lien qu’il contient. Désinscription à tout moment via le lien dans chaque e-mail.",
       subBtn: "S’inscrire par e-mail",
       subMailSubject: "ABO Zinscheck [FR]",
@@ -1021,6 +1058,9 @@
       subTitle: "Avviso e-mail: non perdere il prossimo ribasso",
       subPlaceholder: "Indirizzo e-mail",
       subSubmit: "Iscriviti",
+      subBusy: "Un attimo …",
+      subDone: "Quasi fatto! Le abbiamo appena inviato un’e-mail — clicchi sul link di conferma che contiene. (Controlli anche la cartella spam.)",
+      subError: "Iscrizione non riuscita — riprovi tra qualche minuto.",
       subFormHint: "Un’e-mail solo quando il tasso di riferimento scende — niente pubblicità. Riceverà prima un’e-mail di conferma: completi l’iscrizione cliccando sul link contenuto. Disiscrizione in ogni momento tramite il link in ogni e-mail.",
       subBtn: "Iscriversi via e-mail",
       subMailSubject: "ABO Zinscheck [IT]",
@@ -1093,6 +1133,9 @@
       subTitle: "Email alert: don’t miss the next cut",
       subPlaceholder: "Email address",
       subSubmit: "Subscribe",
+      subBusy: "One moment …",
+      subDone: "Almost done! We’ve just sent you an email — click the confirmation link in it. (Check your spam folder too.)",
+      subError: "Signup failed — please try again in a few minutes.",
       subFormHint: "One email only when the reference rate drops — no ads. You’ll first receive a confirmation email: complete the signup by clicking the link in it. Unsubscribe any time via the link in every email.",
       subBtn: "Sign up by email",
       subMailSubject: "ABO Zinscheck [EN]",
@@ -1554,24 +1597,7 @@
     $("th-delta").textContent = s.thDelta;
     if (chartSvg) chartSvg.setAttribute("aria-label", s.chartAria(fmtRate(CURRENT)));
     // subscription (hero)
-    $("sub-title").textContent = s.subTitle;
-    if (NEWSLETTER.action) {
-      $("sub-form").hidden = false;
-      $("sub-fallback").hidden = true;
-      const subInput = $("sub-email");
-      subInput.placeholder = s.subPlaceholder;
-      subInput.setAttribute("aria-label", s.subPlaceholder);
-      $("sub-submit").textContent = s.subSubmit;
-      $("sub-hint").textContent = s.subFormHint;
-    } else {
-      $("sub-fallback").hidden = false;
-      const subBtnEl = $("sub-btn");
-      subBtnEl.textContent = s.subBtn;
-      subBtnEl.href = "mailto:" + SUBSCRIBE_ADDR +
-        "?subject=" + encodeURIComponent(s.subMailSubject) +
-        "&body=" + encodeURIComponent(s.subMailBody);
-      $("sub-hint").textContent = s.subHint(SUBSCRIBE_ADDR);
-    }
+    renderSub();
     // footer
     $("src").textContent = s.src;
     $("contact-label").textContent = s.contactLabel;
@@ -1586,6 +1612,53 @@
   langToggle.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-lang]");
     if (btn) applyLang(btn.dataset.lang);
+  });
+
+  // ---------- Newsletter signup: render + submit ----------
+  function renderSub() {
+    const s = S();
+    $("sub-title").textContent = s.subTitle;
+    if (!NEWSLETTER.action) {
+      $("sub-fallback").hidden = false;
+      const subBtnEl = $("sub-btn");
+      subBtnEl.textContent = s.subBtn;
+      subBtnEl.href = "mailto:" + SUBSCRIBE_ADDR +
+        "?subject=" + encodeURIComponent(s.subMailSubject) +
+        "&body=" + encodeURIComponent(s.subMailBody);
+      $("sub-hint").textContent = s.subHint(SUBSCRIBE_ADDR);
+      return;
+    }
+    $("sub-fallback").hidden = true;
+    const form = $("sub-form");
+    const input = $("sub-email");
+    const btn = $("sub-submit");
+    form.hidden = subState === "done";
+    input.placeholder = s.subPlaceholder;
+    input.setAttribute("aria-label", s.subPlaceholder);
+    btn.textContent = subState === "busy" ? s.subBusy : s.subSubmit;
+    btn.disabled = subState === "busy";
+    const hint = $("sub-hint");
+    hint.classList.toggle("ok", subState === "done");
+    hint.classList.toggle("err", subState === "error");
+    hint.textContent =
+      subState === "done" ? s.subDone :
+      subState === "error" ? s.subError : s.subFormHint;
+  }
+
+  document.getElementById("sub-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (subState === "busy") return;
+    const email = document.getElementById("sub-email").value.trim();
+    if (!email) return;
+    subState = "busy";
+    renderSub();
+    try {
+      const res = await submitJsonp(await solveAltcha(), email);
+      subState = res && res.err && Object.keys(res.err).length ? "error" : "done";
+    } catch (err) {
+      subState = "error";
+    }
+    renderSub();
   });
 
   {
