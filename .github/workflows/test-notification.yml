@@ -1,0 +1,41 @@
+name: Test subscriber notification
+
+# Manual dry-run of the notification machinery (Actions tab -> Run workflow):
+#   - always: offline selftest + subscriber COUNTS from the mailbox (no
+#     addresses are ever logged — the repo and its logs are public)
+#   - optionally: send the notification mail in all four languages to ONE
+#     address you specify (uses the most recent decrease in the series)
+# Never mails subscribers.
+
+on:
+  workflow_dispatch:
+    inputs:
+      send_test_to:
+        description: "Optional: address to receive test mails (all 4 languages)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Offline selftest (templates + parsing)
+        run: python3 scripts/notify_subscribers.py --selftest
+
+      - name: Count subscribers in mailbox
+        env:
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+        run: python3 scripts/notify_subscribers.py --list
+
+      - name: Send test mails
+        if: inputs.send_test_to != ''
+        env:
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+        run: python3 scripts/notify_subscribers.py --test "${{ inputs.send_test_to }}"

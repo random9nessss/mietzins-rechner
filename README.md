@@ -111,6 +111,33 @@ Run tests: `python3 test_mietrecht_engine.py` (or `pytest`).
 5. Rate-direction neutrality: same engine already computes increase headroom
    — the 2027 "defense" product if rates rise.
 
+## Subscriber notifications (zinscheck.ch)
+
+The site offers an email alert for the next rate decrease. There is no
+newsletter service and no stored list — **the info@zinscheck.ch mailbox
+(Infomaniak) is the database**:
+
+- Subscribing = sending a mail with subject `ABO` (the site's button
+  pre-fills it via `mailto:`, with a `[DE]`/`[FR]`/`[IT]`/`[EN]` language
+  tag). Unsubscribing = subject `STOP`. Latest instruction per address wins.
+  Sender ownership is verified by construction. ABO mails may be moved into
+  a folder named `Abo`; they still count. Do not delete them — a deleted
+  ABO mail is an unsubscribe.
+- When the quarterly workflow (`update-rate.yml`) detects a genuine
+  **decrease**, `scripts/notify_subscribers.py` scans the mailbox over IMAP
+  and sends one localized plain-text mail per subscriber over Infomaniak
+  SMTP (throttled; well below Infomaniak's 1,440 mails/24 h limit). It
+  refuses to send unless the newest series step is a decrease effective
+  within the last 14 days (re-run protection).
+- Repo and Action logs are public: the script logs **counts only, never
+  addresses**.
+- Secrets required in the GitHub repo: `MAIL_USER` (info@zinscheck.ch) and
+  `MAIL_PASSWORD`.
+- Manual testing: Actions → "Test subscriber notification" runs the offline
+  selftest and prints subscriber counts; optionally sends all four language
+  templates to one address you specify. Offline check locally:
+  `python3 scripts/notify_subscribers.py --selftest`.
+
 ## Disclaimer
 
 Encodes standard published methodology; it is not legal advice. Individual

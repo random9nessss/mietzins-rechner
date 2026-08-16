@@ -19,6 +19,7 @@ verify (no files touched).  --check prints findings without writing.
 """
 
 import json
+import os
 import re
 import sys
 import urllib.request
@@ -35,6 +36,14 @@ QUARTER_MONTHS = (3, 6, 9, 12)
 def fail(msg: str) -> None:
     print(f"VERIFICATION FAILED: {msg}", file=sys.stderr)
     sys.exit(2)
+
+
+def gh_output(key: str, value: str) -> None:
+    """Expose a step output when running inside GitHub Actions; no-op locally."""
+    path = os.environ.get("GITHUB_OUTPUT")
+    if path:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(f"{key}={value}\n")
 
 
 def first_working_day(year: int, month: int) -> date:
@@ -163,6 +172,9 @@ def main() -> None:
         series.append((str(eff), rate))
         new_entry = (eff, rate)
         print(f"rate CHANGED -> appending [{eff}, {fmt_rate(rate)}]")
+    # only a genuine decrease may trigger subscriber mails, never a
+    # date-only refresh or an increase
+    gh_output("rate_decreased", "true" if (new_entry and rate < last_rate) else "false")
 
     if new_entry is None and data["announcedOn"] == str(announced) and data["nextAnnouncement"] == str(nxt):
         print("nothing to change — data already current")

@@ -52,6 +52,30 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh api -X POST "repos/${{ github.repository }}/pages/builds"
 
+      # Only on a genuine DECREASE: mail everyone who subscribed via the
+      # info@zinscheck.ch mailbox (subject ABO; see scripts/notify_subscribers.py).
+      # continue-on-error so a mail hiccup never re-flags the (successful) data
+      # update as failed — it gets its own issue below instead.
+      - name: Notify subscribers of the reduction
+        id: notify
+        if: steps.update.outputs.changed == 'true' && steps.update.outputs.rate_decreased == 'true'
+        continue-on-error: true
+        env:
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+        run: |
+          python3 scripts/notify_subscribers.py --selftest
+          python3 scripts/notify_subscribers.py --send
+
+      - name: Open issue on notification failure
+        if: steps.notify.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "Subscriber notification failed ($(date -u +%Y-%m-%d))" \
+            --body "The rate data was updated and deployed successfully, but sending the rent-reduction notification emails failed (check MAIL_USER/MAIL_PASSWORD secrets and the workflow logs — no addresses are logged). Re-send manually within 14 days of the effective date with: MAIL_USER=... MAIL_PASSWORD=... python3 scripts/notify_subscribers.py --send"
+
       - name: Open issue on verification failure
         if: failure()
         env:

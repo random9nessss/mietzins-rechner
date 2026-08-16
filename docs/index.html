@@ -541,6 +541,9 @@
 
   /* ---------- Notes & footer ---------- */
   section.notes { padding: 8px 8px 0; }
+  #subscribe-sec .sub-cta { margin: 16px 0 4px; }
+  #subscribe-sec .sub-cta a.mail { display: inline-block; }
+  #subscribe-sec .hint { max-width: 62ch; }
   @media (min-width: 860px) { .notes-cols { columns: 2; column-gap: 48px; } }
   .notes p { font-size: 13px; line-height: 1.62; color: var(--muted); margin: 0 0 10px; max-width: 58ch; break-inside: avoid; }
   .notes p strong { color: var(--ink); font-weight: 600; }
@@ -730,6 +733,13 @@
     </section>
   </div>
 
+  <section class="notes reveal" id="subscribe-sec">
+    <h2 id="sub-title"></h2>
+    <p id="sub-text"></p>
+    <p class="sub-cta"><a class="mail" id="sub-btn" href="#"></a></p>
+    <p class="hint" id="sub-hint"></p>
+  </section>
+
   <footer>
     <span id="visits" hidden><span id="visits-num"></span> <span id="visits-label"></span></span>
     <span id="src"></span>
@@ -746,6 +756,7 @@
   const SERIES = DATA.series;
   const CURRENT = SERIES[SERIES.length - 1][1];
   const CURRENT_SINCE = SERIES[SERIES.length - 1][0];
+  const SUBSCRIBE_ADDR = "info@zinscheck.ch";   // scanned by scripts/notify_subscribers.py
 
   const chf = new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 });
   const NBSP = " ";                       // never wrap before the % sign
@@ -802,6 +813,12 @@
       contactLabel: "Kontakt & Impressum:",
       visitsLabel: "Besuche",
       stand: (d) => "Stand: " + d,
+      subTitle: "E-Mail-Erinnerung: die nächste Senkung nicht verpassen",
+      subText: "Der Referenzzinssatz wird viermal im Jahr überprüft. Tragen Sie sich ein und Sie erhalten genau dann eine E-Mail, wenn der Satz sinkt und ein Senkungsbegehren möglich wird — keine Werbung, keine weiteren E-Mails.",
+      subBtn: "Per E-Mail anmelden",
+      subMailSubject: "ABO Zinscheck [DE]",
+      subMailBody: "Bitte benachrichtigt mich, wenn der Referenzzinssatz sinkt.\n\n(Diese E-Mail einfach unverändert absenden — fertig.)",
+      subHint: (a) => "Die Anmeldung ist eine E-Mail mit Betreff «ABO» an " + a + " — abmelden jederzeit mit Betreff «STOP». Ihre Adresse wird ausschliesslich für diese Benachrichtigung verwendet und nie weitergegeben.",
       letter: (cur, neu, diff, pct, basis) => [
         "Betreff: Begehren um Mietzinssenkung", "",
         "Sehr geehrte Damen und Herren", "",
@@ -866,6 +883,12 @@
       contactLabel: "Contact & mentions légales :",
       visitsLabel: "visites",
       stand: (d) => "État au " + d,
+      subTitle: "Alerte e-mail : ne manquez pas la prochaine baisse",
+      subText: "Le taux de référence est réexaminé quatre fois par an. Inscrivez-vous et vous recevrez un e-mail précisément lorsque le taux baisse et qu’une demande de baisse devient possible — pas de publicité, pas d’autres e-mails.",
+      subBtn: "S’inscrire par e-mail",
+      subMailSubject: "ABO Zinscheck [FR]",
+      subMailBody: "Merci de m’informer lorsque le taux de référence baisse.\n\n(Envoyez simplement cet e-mail tel quel.)",
+      subHint: (a) => "L’inscription est un e-mail avec l’objet «ABO» à " + a + " — désinscription à tout moment avec l’objet «STOP». Votre adresse n’est utilisée que pour cette notification et n’est jamais transmise.",
       letter: (cur, neu, diff, pct, basis) => [
         "Objet : Demande de baisse de loyer", "",
         "Madame, Monsieur,", "",
@@ -930,6 +953,12 @@
       contactLabel: "Contatto e note legali:",
       visitsLabel: "visite",
       stand: (d) => "Stato al " + d,
+      subTitle: "Avviso e-mail: non perdere il prossimo ribasso",
+      subText: "Il tasso di riferimento viene riesaminato quattro volte l’anno. Si iscriva e riceverà un’e-mail esattamente quando il tasso scende e una richiesta di riduzione diventa possibile — niente pubblicità, nessun’altra e-mail.",
+      subBtn: "Iscriversi via e-mail",
+      subMailSubject: "ABO Zinscheck [IT]",
+      subMailBody: "Vi prego di informarmi quando il tasso di riferimento scende.\n\n(Basta inviare questa e-mail così com’è.)",
+      subHint: (a) => "L’iscrizione è un’e-mail con oggetto «ABO» a " + a + " — disiscrizione in qualsiasi momento con oggetto «STOP». Il suo indirizzo è usato solo per questa notifica e non viene mai trasmesso.",
       letter: (cur, neu, diff, pct, basis) => [
         "Oggetto: Richiesta di riduzione della pigione", "",
         "Gentili Signore e Signori,", "",
@@ -994,6 +1023,12 @@
       contactLabel: "Contact & legal notice:",
       visitsLabel: "visits",
       stand: (d) => "As of " + d,
+      subTitle: "Email alert: don’t miss the next cut",
+      subText: "The reference rate is reviewed four times a year. Sign up and you’ll get one email exactly when the rate drops and a reduction request becomes possible — no ads, no other emails.",
+      subBtn: "Sign up by email",
+      subMailSubject: "ABO Zinscheck [EN]",
+      subMailBody: "Please notify me when the reference interest rate drops.\n\n(Just send this email as it is.)",
+      subHint: (a) => "Signing up is one email with subject “ABO” to " + a + " — unsubscribe any time with subject “STOP”. Your address is used only for this notification and never shared.",
       letter: (cur, neu, diff, pct, basis) => [
         "Subject: Request for rent reduction", "",
         "Dear Sir or Madam,", "",
@@ -1449,6 +1484,15 @@
     $("th-rate").textContent = s.thRate;
     $("th-delta").textContent = s.thDelta;
     if (chartSvg) chartSvg.setAttribute("aria-label", s.chartAria(fmtRate(CURRENT)));
+    // subscription
+    $("sub-title").textContent = s.subTitle;
+    $("sub-text").textContent = s.subText;
+    $("sub-hint").textContent = s.subHint(SUBSCRIBE_ADDR);
+    const subBtnEl = $("sub-btn");
+    subBtnEl.textContent = s.subBtn;
+    subBtnEl.href = "mailto:" + SUBSCRIBE_ADDR +
+      "?subject=" + encodeURIComponent(s.subMailSubject) +
+      "&body=" + encodeURIComponent(s.subMailBody);
     // footer
     $("src").textContent = s.src;
     $("contact-label").textContent = s.contactLabel;
