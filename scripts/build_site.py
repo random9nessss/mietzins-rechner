@@ -46,7 +46,12 @@ HEAD = f"""<!doctype html>
 <body>
 """
 
-FOOT = "</body>\n</html>\n"
+# Cookieless analytics — only on the hosted site, never in the artifact preview.
+FOOT = (
+    '<script data-goatcounter="https://zinscheck.goatcounter.com/count" '
+    'async src="https://gc.zgo.at/count.js"></script>\n'
+    "</body>\n</html>\n"
+)
 
 
 def main() -> None:

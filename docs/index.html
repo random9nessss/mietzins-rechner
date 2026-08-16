@@ -557,6 +557,7 @@
   }
   footer a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   footer a:hover { color: var(--ink); }
+  #visits { font-variant-numeric: tabular-nums; }
 </style>
 
 <script>
@@ -730,6 +731,7 @@
   </div>
 
   <footer>
+    <span id="visits" hidden><span id="visits-num"></span> <span id="visits-label"></span></span>
     <span id="src"></span>
     <span><span id="contact-label"></span> <a href="mailto:kevin.bruendler@protonmail.com">kevin.bruendler@protonmail.com</a></span>
     <span id="stand"></span>
@@ -798,6 +800,7 @@
       chartAria: (r) => "Verlauf des Referenzzinssatzes von 2008 bis heute, von 3.50 % auf " + r,
       src: "Quelle: Bundesamt für Wohnungswesen (BWO) · aktualisiert nach jeder Publikation",
       contactLabel: "Kontakt & Impressum:",
+      visitsLabel: "Besuche",
       stand: (d) => "Stand: " + d,
       letter: (cur, neu, diff, pct, basis) => [
         "Betreff: Begehren um Mietzinssenkung", "",
@@ -861,6 +864,7 @@
       chartAria: (r) => "Évolution du taux de référence de 2008 à aujourd’hui, de 3.50 % à " + r,
       src: "Source : Office fédéral du logement (OFL) · mis à jour après chaque publication",
       contactLabel: "Contact & mentions légales :",
+      visitsLabel: "visites",
       stand: (d) => "État au " + d,
       letter: (cur, neu, diff, pct, basis) => [
         "Objet : Demande de baisse de loyer", "",
@@ -924,6 +928,7 @@
       chartAria: (r) => "Andamento del tasso di riferimento dal 2008 a oggi, dal 3.50 % al " + r,
       src: "Fonte: Ufficio federale delle abitazioni (UFAB) · aggiornato dopo ogni pubblicazione",
       contactLabel: "Contatto e note legali:",
+      visitsLabel: "visite",
       stand: (d) => "Stato al " + d,
       letter: (cur, neu, diff, pct, basis) => [
         "Oggetto: Richiesta di riduzione della pigione", "",
@@ -987,6 +992,7 @@
       chartAria: (r) => "Reference rate from 2008 to today, from 3.50 % down to " + r,
       src: "Source: Swiss Federal Office for Housing (BWO/OFL) · updated after each publication",
       contactLabel: "Contact & legal notice:",
+      visitsLabel: "visits",
       stand: (d) => "As of " + d,
       letter: (cur, neu, diff, pct, basis) => [
         "Subject: Request for rent reduction", "",
@@ -1446,6 +1452,7 @@
     // footer
     $("src").textContent = s.src;
     $("contact-label").textContent = s.contactLabel;
+    $("visits-label").textContent = s.visitsLabel;
     $("stand").textContent = s.stand(fmtDate(DATA.announcedOn));
     // dynamic re-renders
     renderPicker();
@@ -1467,6 +1474,23 @@
     }
     applyLang(lang);
   }
+
+  // ---------- Visitor counter (GoatCounter; stays hidden when unavailable) ----------
+  const GOATCOUNTER = "zinscheck";
+  (async () => {
+    for (const path of ["TOTAL", "%2F"]) {       // site total, fallback: homepage
+      try {
+        const r = await fetch(`https://${GOATCOUNTER}.goatcounter.com/counter/${path}.json`);
+        if (!r.ok) continue;
+        const n = parseInt(String((await r.json()).count).replace(/\D/g, ""), 10);
+        if (!Number.isFinite(n) || n < 1) continue;
+        document.getElementById("visits-num").textContent = chf.format(n);
+        document.getElementById("visits").hidden = false;
+        return;
+      } catch (e) { /* no account yet, adblock, or CSP: keep hidden */ }
+    }
+  })();
 </script>
+<script data-goatcounter="https://zinscheck.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </body>
 </html>
