@@ -27,6 +27,7 @@ Exit codes: 0 = ok · 2 = refused/failed (nothing or only partly sent).
 
 import email.utils
 import imaplib
+import json
 import os
 import re
 import smtplib
@@ -168,13 +169,13 @@ def fmt_rate(r: float) -> str:
 
 def load_series() -> list[tuple[date, float]]:
     m = re.search(
-        r'<script id="rate-data" type="application/json">.*?"series":\s*\[(.*?)\]',
+        r'<script id="rate-data" type="application/json">\s*(\{.*?\})\s*</script>',
         PAGE.read_text(encoding="utf-8"),
         re.S,
     )
     if not m:
         fail("rate-data block not found in index.html")
-    entries = re.findall(r'\["(\d{4}-\d{2}-\d{2})",\s*([0-9.]+)\]', m.group(1))
+    entries = json.loads(m.group(1))["series"]
     if len(entries) < 2:
         fail("rate series too short")
     return [(date.fromisoformat(d), float(r)) for d, r in entries]
@@ -355,7 +356,14 @@ def selftest() -> None:
         assert "1.25" in msg["Subject"], lang
     # sanity on the engine convention: 1.75 -> 1.25 must be -5.66 %
     assert abs(abs(reference_rate_change_pct(1.75, 1.25)) * 100 - 5.66) < 0.01
-    print("selftest OK — parsing and all four templates render correctly")
+    # the real series must load, be chronological, and contain a decrease
+    series = load_series()
+    assert len(series) >= 2, "series too short"
+    assert all(a[0] < b[0] for a, b in zip(series, series[1:])), "series not chronological"
+    old, new, eff = last_decrease(series)
+    assert new < old and isinstance(eff, date)
+    print(f"selftest OK — parsing, all four templates, series ({len(series)} entries, "
+          f"last decrease {old} -> {new} on {eff})")
 
 
 def main() -> None:
