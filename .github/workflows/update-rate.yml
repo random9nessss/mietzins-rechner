@@ -63,6 +63,7 @@ jobs:
         env:
           MAIL_USER: ${{ secrets.MAIL_USER }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          INFOMANIAK_TOKEN: ${{ secrets.INFOMANIAK_TOKEN }}
         run: |
           python3 scripts/notify_subscribers.py --selftest
           python3 scripts/notify_subscribers.py --send

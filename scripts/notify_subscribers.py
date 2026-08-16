@@ -1,18 +1,28 @@
 #!/usr/bin/env python3
-"""Notify subscribers when the Referenzzinssatz drops — mailbox-as-database.
+"""Notify subscribers when the Referenzzinssatz drops.
 
-There is no subscriber list stored anywhere: the info@zinscheck.ch mailbox IS
-the list. People subscribe by sending a mail with subject "ABO" (the site's
-button pre-fills it) and unsubscribe with subject "STOP"; per address, the
-most recent instruction wins. This script scans the mailbox over IMAP, then
-sends one localized plain-text mail per subscriber over Infomaniak SMTP.
+Recipients are merged from two sources, then de-duplicated:
+
+  1. The info@zinscheck.ch mailbox (IMAP): mails with subject "ABO" subscribe,
+     "STOP" unsubscribes; per address the most recent instruction wins.
+  2. The Infomaniak Newsletter subscriber list (REST API): filled by the
+     site's signup form with Infomaniak's double opt-in; only status
+     "active" counts. Language: membership in a group whose name contains
+     DE/FR/IT/EN as a word (e.g. "Zinscheck FR"); default is German. The
+     Newsletter product is used purely as the double-opt-in front door —
+     sending always happens here via SMTP (free, localized), never via
+     paid campaign credits.
+
+A mailbox STOP always wins, including over the API list. Sending is one
+localized plain-text mail per subscriber over Infomaniak SMTP.
 
 The repo and its Action logs are public, so NO email address is ever printed
 — only counts.
 
 Credentials come from the environment (GitHub Actions secrets):
-  MAIL_USER      full mailbox address, e.g. info@zinscheck.ch
-  MAIL_PASSWORD  mailbox (or app) password
+  MAIL_USER         full mailbox address, e.g. info@zinscheck.ch
+  MAIL_PASSWORD     mailbox (or app) password
+  INFOMANIAK_TOKEN  API token (optional — without it, mailbox-only)
 
 Modes:
   --selftest     offline checks of parsing + all four templates (no network)
@@ -34,6 +44,7 @@ import smtplib
 import ssl
 import sys
 import time
+import urllib.request
 from datetime import date, datetime, timedelta, timezone
 from email.header import decode_header, make_header
 from email.message import EmailMessage
@@ -53,6 +64,11 @@ SENDER_NAME = "Zinscheck"
 FOLDERS = ("INBOX", "Abo", "INBOX/Abo")
 SEND_DELAY_S = 1.5          # stay far inside Infomaniak's 1440-mails/24h limit
 FRESH_DAYS = 14             # --send refuses if the decrease is older than this
+
+# Infomaniak Newsletter product for zinscheck.ch (Manager account 2187845).
+# Useless without the API token, so safe to keep in the public repo.
+NEWSLETTER_API = "https://api.infomaniak.com/1/newsletters/64976"
+GROUP_LANG_RE = re.compile(r"\b(DE|FR|IT|EN)\b", re.I)
 
 SUBSCRIBE_RE = re.compile(r"\b(ABO|ABONNIEREN|SUBSCRIBE)\b", re.I)
 UNSUBSCRIBE_RE = re.compile(r"\b(STOP|ABMELDEN|UNSUBSCRIBE)\b", re.I)
@@ -225,7 +241,67 @@ def decode_subject(raw: str) -> str:
         return raw
 
 
-def collect_subscribers(user: str, password: str) -> dict[str, str]:
+def _api_get(token: str, path: str):
+    req = urllib.request.Request(
+        NEWSLETTER_API + path,
+        headers={"Authorization": f"Bearer {token}",
+                 "User-Agent": "zinscheck.ch notifier"},
+    )
+    with urllib.request.urlopen(req, timeout=30) as r:
+        payload = json.load(r)
+    if payload.get("result") != "success":
+        raise RuntimeError(f"newsletter API returned {payload.get('result')!r} on {path}")
+    return payload["data"]
+
+
+def collect_api_subscribers(token: str) -> dict[str, str]:
+    """Active subscribers from the Infomaniak Newsletter list, {addr: lang}."""
+    subs: dict[str, str] = {}
+    page = 1
+    while page <= 100:
+        batch = _api_get(token, f"/subscribers?page={page}&per_page=500")
+        for s in batch:
+            addr = (s.get("email") or "").strip().lower()
+            if addr and s.get("status") == "active":
+                subs[addr] = "de"
+        if len(batch) < 500:
+            break
+        page += 1
+    # language comes from membership in a group named e.g. "Zinscheck FR"
+    for group in _api_get(token, "/groups"):
+        m = GROUP_LANG_RE.search(group.get("name", ""))
+        if not m:
+            continue
+        lang = m.group(1).lower()
+        for s in _api_get(token, f"/groups/{group['id']}/subscribers"):
+            addr = (s.get("email") or "").strip().lower()
+            if addr in subs:
+                subs[addr] = lang
+    return subs
+
+
+def collect_recipients(user: str, password: str) -> tuple[dict[str, str], int, int]:
+    """Merged mailbox + Newsletter recipients; mailbox STOP always wins.
+    Returns (recipients, mailbox_count, api_count)."""
+    mbox_subs, stops = collect_mailbox_state(user, password)
+    token = os.environ.get("INFOMANIAK_TOKEN", "").strip()
+    if token:
+        try:
+            api_subs = collect_api_subscribers(token)
+        except Exception as e:  # noqa: BLE001 — better a loud issue than a partial send
+            fail(f"could not read newsletter subscribers: {e}")
+    else:
+        api_subs = {}
+        print("INFOMANIAK_TOKEN not set — mailbox subscribers only")
+    merged = dict(api_subs)
+    merged.update(mbox_subs)          # an explicit ABO language beats the default
+    for addr in stops:
+        merged.pop(addr, None)
+    merged.pop(user.lower(), None)    # never mail ourselves
+    return merged, len(mbox_subs), len(api_subs)
+
+
+def collect_mailbox_state(user: str, password: str) -> tuple[dict[str, str], set]:
     imap = imaplib.IMAP4_SSL(IMAP_HOST, 993, ssl_context=ssl.create_default_context())
     imap.login(user, password)
     # (last_action_time, action, lang) per lower-cased address
@@ -267,7 +343,9 @@ def collect_subscribers(user: str, password: str) -> dict[str, str]:
             imap.logout()
         except Exception:
             pass
-    return {addr: lang for addr, (_, action, lang) in state.items() if action == "sub"}
+    subs = {addr: lang for addr, (_, action, lang) in state.items() if action == "sub"}
+    stops = {addr for addr, (_, action, _lang) in state.items() if action == "unsub"}
+    return subs, stops
 
 
 # ---------------------------------------------------------------------------
@@ -346,6 +424,11 @@ def selftest() -> None:
     assert ROBOT_RE.match("mailer-daemon")
     assert ROBOT_RE.match("noreply")
     assert not ROBOT_RE.match("hans.muster")
+    # group-name -> language mapping for the Newsletter list
+    assert GROUP_LANG_RE.search("Zinscheck FR").group(1).lower() == "fr"
+    assert GROUP_LANG_RE.search("abo-it IT").group(1).lower() == "it"
+    assert GROUP_LANG_RE.search("Zinscheck Abo") is None
+    assert GROUP_LANG_RE.search("FRIENDS") is None
     # every template must render with realistic values and contain the numbers
     for lang in TEMPLATES:
         msg = build_mail(lang, "info@zinscheck.ch", "x@example.org",
@@ -376,12 +459,13 @@ def main() -> None:
 
     if "--list" in args:
         user, password = get_credentials()
-        subs = collect_subscribers(user, password)
+        subs, n_mbox, n_api = collect_recipients(user, password)
         counts: dict[str, int] = {}
         for lang in subs.values():
             counts[lang] = counts.get(lang, 0) + 1
         by_lang = ", ".join(f"{k}: {v}" for k, v in sorted(counts.items())) or "—"
-        print(f"subscribers: {len(subs)} ({by_lang})")
+        print(f"recipients: {len(subs)} ({by_lang}) — "
+              f"mailbox: {n_mbox}, newsletter list: {n_api}")
         return
 
     if "--test" in args:
@@ -405,9 +489,9 @@ def main() -> None:
             fail(f"decrease took effect {eff}, older than {FRESH_DAYS} days — refusing "
                  "to send (stale re-run?)")
         user, password = get_credentials()
-        subs = collect_subscribers(user, password)
+        subs, n_mbox, n_api = collect_recipients(user, password)
         print(f"rate {fmt_rate(old)} -> {fmt_rate(new)} effective {eff}; "
-              f"{len(subs)} subscriber(s)")
+              f"{len(subs)} recipient(s) (mailbox: {n_mbox}, newsletter list: {n_api})")
         if not subs:
             print("nothing to send")
             return

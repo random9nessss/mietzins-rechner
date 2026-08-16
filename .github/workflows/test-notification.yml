@@ -27,10 +27,11 @@ jobs:
       - name: Offline selftest (templates + parsing)
         run: python3 scripts/notify_subscribers.py --selftest
 
-      - name: Count subscribers in mailbox
+      - name: Count subscribers (mailbox + newsletter list)
         env:
           MAIL_USER: ${{ secrets.MAIL_USER }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          INFOMANIAK_TOKEN: ${{ secrets.INFOMANIAK_TOKEN }}
         run: python3 scripts/notify_subscribers.py --list
 
       - name: Send test mails

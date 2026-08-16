@@ -121,12 +121,17 @@ newsletter service and no stored list — **the info@zinscheck.ch mailbox
   the `NEWSLETTER` config object in `index.html`:
   - **Form mode** (when `NEWSLETTER.action` is set): email field + Subscribe
     button POSTing to an Infomaniak **Newsletter** embed form. Infomaniak
-    sends the double-opt-in confirmation mail and hosts the confirmed list;
-    unsubscribing is the link in every campaign mail. To activate: Infomaniak
-    Manager → Newsletter → create a form → Embed code (HTML tab) → copy the
-    form's action URL, email field name, and hidden inputs into `NEWSLETTER`.
-    Sending to this list happens via Infomaniak campaigns (dashboard or API),
-    not via the SMTP script below.
+    sends the double-opt-in confirmation mail and hosts the confirmed list
+    (product id 64976). To activate: Infomaniak Manager → Newsletter →
+    create a form → Embed code (HTML tab) → copy the form's action URL,
+    email field name, and hidden inputs into `NEWSLETTER`. The Newsletter
+    product is only the signup front door: at send time the SMTP script
+    below reads the confirmed subscribers via the Infomaniak REST API
+    (`INFOMANIAK_TOKEN` secret) and merges them with the mailbox list — no
+    campaign credits are ever consumed. Subscriber language comes from
+    membership in a group whose name contains DE/FR/IT/EN (e.g. a form per
+    language targeting "Zinscheck FR"); default is German. A mailbox STOP
+    beats both sources.
   - **Fallback mode** (action empty, current state): a `mailto:` button —
     subscribing = sending a mail with subject `ABO` (pre-filled, with a
     `[DE]`/`[FR]`/`[IT]`/`[EN]` language tag), unsubscribing = subject
@@ -141,8 +146,10 @@ newsletter service and no stored list — **the info@zinscheck.ch mailbox
   within the last 14 days (re-run protection).
 - Repo and Action logs are public: the script logs **counts only, never
   addresses**.
-- Secrets required in the GitHub repo: `MAIL_USER` (info@zinscheck.ch) and
-  `MAIL_PASSWORD`.
+- Secrets required in the GitHub repo: `MAIL_USER` (info@zinscheck.ch),
+  `MAIL_PASSWORD`, and `INFOMANIAK_TOKEN` (API token for reading the
+  Newsletter subscriber list; without it the script degrades to
+  mailbox-only).
 - Manual testing: Actions → "Test subscriber notification" runs the offline
   selftest and prints subscriber counts; optionally sends all four language
   templates to one address you specify. Offline check locally:
