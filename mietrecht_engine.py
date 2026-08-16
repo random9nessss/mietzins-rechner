@@ -60,7 +60,7 @@ REFERENCE_RATE_SERIES: list[tuple[date, float]] = [
     (date(2023, 6, 2), 1.50),   # first increase since introduction
     (date(2023, 12, 2), 1.75),
     (date(2025, 3, 4), 1.50),
-    (date(2025, 9, 2), 1.25),   # unchanged through the 01.06.2026 announcement
+    (date(2025, 9, 2), 1.25),
 ]
 
 # Last BWO announcement reflected in the series / next scheduled announcement.

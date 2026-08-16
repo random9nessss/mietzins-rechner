@@ -1,0 +1,62 @@
+name: Update Referenzzinssatz
+
+on:
+  schedule:
+    # 4th of Mar/Jun/Sep/Dec, 08:00 UTC — a few days after the BWO announcement
+    # on the first working day of the month.
+    - cron: "0 8 4 3,6,9,12 *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  issues: write
+  pages: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch BWO rate and patch data
+        id: update
+        run: |
+          set +e
+          python3 scripts/update_rate.py
+          code=$?
+          set -e
+          if [ "$code" = "0" ];  then echo "changed=true"  >> "$GITHUB_OUTPUT"; fi
+          if [ "$code" = "78" ]; then echo "changed=false" >> "$GITHUB_OUTPUT"; echo "Nothing to do."; fi
+          if [ "$code" != "0" ] && [ "$code" != "78" ]; then exit "$code"; fi
+
+      - name: Run engine tests
+        if: steps.update.outputs.changed == 'true'
+        run: python3 test_mietrecht_engine.py
+
+      - name: Rebuild site
+        if: steps.update.outputs.changed == 'true'
+        run: python3 scripts/build_site.py
+
+      - name: Commit and push
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html mietrecht_engine.py docs/
+          git commit -m "bwo: automatic Referenzzinssatz data update"
+          git push
+
+      - name: Trigger Pages deployment
+        if: steps.update.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds"
+
+      - name: Open issue on verification failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "Referenzzinssatz auto-update failed ($(date -u +%Y-%m-%d))" \
+            --body "The quarterly BWO updater could not verify or apply the new data. Nothing was committed. Check the workflow run logs, verify the rate manually at https://www.bwo.admin.ch/de/referenzzinssatz, and update the rate-data JSON in index.html plus REFERENCE_RATE_SERIES in mietrecht_engine.py by hand (then run scripts/build_site.py)."
