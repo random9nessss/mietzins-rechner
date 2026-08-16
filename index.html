@@ -528,8 +528,30 @@
   section.notes { padding: 8px 8px 0; }
 
   /* ---------- Hero signup (rate-drop email alert) ---------- */
-  .sub-hero { margin-top: 30px; }
-  .sub-hero-title { font-size: 14px; font-weight: 600; color: var(--ink); margin: 0 0 12px; }
+  .sub-hero { margin-top: 26px; }
+  details.sub-details summary {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s ease;
+  }
+  details.sub-details summary::-webkit-details-marker { display: none; }
+  details.sub-details summary::after {
+    content: "";
+    width: 7px; height: 7px;
+    border-right: 1.6px solid currentColor;
+    border-bottom: 1.6px solid currentColor;
+    transform: rotate(45deg) translateY(-2px);
+    transition: transform 0.25s ease;
+  }
+  details.sub-details[open] summary::after { transform: rotate(225deg) translateY(-1px); }
+  details.sub-details summary:hover, details.sub-details[open] summary { color: var(--ink); }
+  .sub-body { margin-top: 14px; }
   .sub-form { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   .sub-form input {
     width: min(320px, 100%);
@@ -651,13 +673,17 @@
     <p class="figure" id="current-rate">–</p>
     <p class="meta" id="rate-meta"></p>
     <div class="sub-hero" id="sub-hero">
-      <p class="sub-hero-title" id="sub-title"></p>
-      <form class="sub-form" id="sub-form" method="post" target="_blank" hidden>
-        <input type="email" id="sub-email" autocomplete="email" spellcheck="false" required>
-        <button type="submit" class="sub-submit" id="sub-submit"></button>
-      </form>
-      <p class="sub-cta" id="sub-fallback" hidden><a class="mail" id="sub-btn" href="#"></a></p>
-      <p class="hint" id="sub-hint"></p>
+      <details class="sub-details" id="sub-details">
+        <summary id="sub-title"></summary>
+        <div class="sub-body">
+          <form class="sub-form" id="sub-form" hidden>
+            <input type="email" id="sub-email" autocomplete="email" spellcheck="false" required>
+            <button type="submit" class="sub-submit" id="sub-submit"></button>
+          </form>
+          <p class="sub-cta" id="sub-fallback" hidden><a class="mail" id="sub-btn" href="#"></a></p>
+          <p class="hint" id="sub-hint"></p>
+        </div>
+      </details>
     </div>
   </header>
 
@@ -1628,6 +1654,12 @@
       subState === "done" ? s.subDone :
       subState === "error" ? s.subError : s.subFormHint;
   }
+
+  document.getElementById("sub-details").addEventListener("toggle", function() {
+    if (this.open && NEWSLETTER.action && subState === "idle") {
+      document.getElementById("sub-email").focus();
+    }
+  });
 
   document.getElementById("sub-form").addEventListener("submit", async (e) => {
     e.preventDefault();
