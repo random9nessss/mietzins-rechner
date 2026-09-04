@@ -64,8 +64,8 @@ REFERENCE_RATE_SERIES: list[tuple[date, float]] = [
 ]
 
 # Last BWO announcement reflected in the series / next scheduled announcement.
-SERIES_AS_OF: date = date(2026, 6, 1)
-NEXT_ANNOUNCEMENT: date = date(2026, 9, 1)
+SERIES_AS_OF: date = date(2026, 9, 1)
+NEXT_ANNOUNCEMENT: date = date(2026, 12, 1)
 
 
 def current_reference_rate() -> float:
